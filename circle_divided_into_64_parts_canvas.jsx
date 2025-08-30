@@ -216,8 +216,10 @@ export default function App() {
 
     const cx = size / 2;
     const cy = size / 2;
-    // Responsive geometry
-    const pad = Math.max(32, Math.min(size * 0.12, 96));
+    // Responsive geometry with larger safety margin so nothing is clipped
+    // We draw up to ~68px beyond the outer ring (cardinals) + tick/arrow slack
+    const outerFeatureExtent = 76; // px
+    const pad = Math.max(outerFeatureExtent, Math.min(size * 0.18, 140));
     const outerR = Math.min(cx, cy) - pad;
     const ringWidth = Math.max(28, Math.min(size * 0.24, 180));
     const innerR = Math.max(outerR - ringWidth, 60);
