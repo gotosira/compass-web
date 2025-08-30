@@ -242,6 +242,23 @@ export default function App() {
     return names[idx];
   }
 
+  function cardinal4(deg) {
+    const cards = ["N", "E", "S", "W"];
+    const d = ((deg % 360) + 360) % 360;
+    const idx = Math.round(d / 90) % 4; // nearest cardinal
+    return cards[idx];
+  }
+
+  function deltaToNearestCardinal(deg) {
+    const d = ((deg % 360) + 360) % 360;
+    const nearestBase = Math.round(d / 90) * 90; // may be 360
+    const base = nearestBase % 360;
+    let diff = d - base;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return Math.abs(diff); // 0..45 ideally
+  }
+
   // Big section mapping per requirement:
   // [0,45):6, [45,90):1, [90,135):2, [135,180):3, [180,225):4, [225,270):7, [270,315):5, [315,360):8
   function bigLabelForDegree(deg) {
@@ -321,7 +338,8 @@ export default function App() {
     // Cleaner outer ticks for readability
     const smallScreen = size < 480;
     for (let deg = 0; deg < 360; deg += 5) {
-      const angle = (deg - 90) * (Math.PI / 180) + rot;
+      // Keep outer ticks/labels fixed relative to the screen (not rotating with heading)
+      const angle = (deg - 90) * (Math.PI / 180);
       const tickBase = outerR + 6;
       const tickLen = deg % 30 === 0 ? 22 : deg % 10 === 0 ? 16 : 10;
       const tickTop = outerR + tickLen;
@@ -413,14 +431,16 @@ export default function App() {
     ctx.fillStyle = "#111827";
     ctx.fill();
 
-    // Center readout (large degrees + direction)
+    // Center readout (Apple-like): 0..45° to nearest cardinal + cardinal letter
+    const delta = deltaToNearestCardinal(heading);
+    const card = cardinal4(heading);
     ctx.fillStyle = "#0f172a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = `600 ${Math.round(size * 0.07)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-    ctx.fillText(`${heading.toFixed(0)}°`, cx, cy - Math.max(10, size * 0.01));
-    ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-    ctx.fillText(dir16(heading), cx, cy + Math.max(18, size * 0.02));
+    ctx.font = `700 ${Math.round(size * 0.08)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.fillText(`${Math.round(delta)}°`, cx, cy - Math.max(10, size * 0.01));
+    ctx.font = `700 ${Math.round(size * 0.04)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.fillText(card, cx, cy + Math.max(18, size * 0.02));
   }, [size, heading]);
 
   const topBarStyle = {
