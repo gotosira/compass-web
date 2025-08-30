@@ -395,6 +395,33 @@ export default function App() {
       ctx.fillText(String(bigLabels[b]), x, y);
     }
 
+    // Sub‑labels inside each big section (8 per section)
+    const seq = [6, 1, 2, 3, 4, 7, 5, 8];
+    const ringWidthPx = outerR - innerR;
+    const subR = innerR + ringWidthPx * 0.28; // closer to inner ring to avoid clutter
+    const subFontPx = Math.max(10, Math.min(14, Math.round(size * 0.03)));
+    ctx.fillStyle = "#0f172a";
+    ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let b = 0; b < 8; b++) {
+      const sectionStartAngle = startAngle + b * bigSlice;
+      const sectionLabel = seq[b];
+      const startIdx = seq.indexOf(sectionLabel);
+      for (let j = 0; j < 8; j++) {
+        const label = seq[(startIdx + j) % 8];
+        const mid = sectionStartAngle + (j + 0.5) * slice;
+        const lx = cx + subR * Math.cos(mid);
+        const ly = cy + subR * Math.sin(mid);
+        // Keep numbers upright for readability
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0);
+        ctx.fillText(String(label), 0, 0);
+        ctx.restore();
+      }
+    }
+
     // Cardinal letters (rotate with dial)
     const cardinals = [
       { t: "N", d: 0 },
