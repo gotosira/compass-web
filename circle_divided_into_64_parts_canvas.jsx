@@ -273,6 +273,20 @@ export default function App() {
     return 8;
   }
 
+  // Determine the sub-label (แทรก) for a given degree using the sequence
+  // starting from the big section label.
+  function smallLabelForDegree(deg) {
+    const seq = [6, 1, 2, 3, 4, 7, 5, 8];
+    const d = ((deg % 360) + 360) % 360;
+    const bigIndex = Math.floor(d / 45); // 0..7 sectors
+    const within = d - bigIndex * 45; // 0..45
+    const subIndex = Math.min(7, Math.floor(within / (45 / 8))); // 0..7
+    const startLabel = seq[bigIndex];
+    const startIdx = seq.indexOf(startLabel);
+    const lbl = seq[(startIdx + subIndex) % 8];
+    return lbl;
+  }
+
   // Draw the dial
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -381,8 +395,8 @@ export default function App() {
 
     // Sub‑label track (soft background to improve legibility over radial lines)
     const ringWidthPx = outerR - innerR;
-    const subTrackInner = innerR + ringWidthPx * 0.18;
-    const subTrackOuter = innerR + ringWidthPx * 0.42;
+    const subTrackOuter = Math.max(innerR + 6, outerR - 12);
+    const subTrackInner = Math.max(innerR + 4, subTrackOuter - 24);
     ctx.beginPath();
     ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
     ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
@@ -407,7 +421,7 @@ export default function App() {
 
     // Sub‑labels inside each big section (8 per section)
     const seq = [6, 1, 2, 3, 4, 7, 5, 8];
-    const subR = innerR + ringWidthPx * 0.28; // closer to inner ring to avoid clutter
+    const subR = (subTrackInner + subTrackOuter) / 2; // near outer ring
     const subFontPx = Math.max(12, Math.min(16, Math.round(size * 0.035)));
     ctx.fillStyle = "#0f172a";
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
@@ -465,15 +479,19 @@ export default function App() {
     ctx.fillStyle = "#111827";
     ctx.fill();
 
-    // Center readout: show the absolute heading 0..359° and nearest 4-cardinal
+    // Center readout: show heading + description (big/small labels)
     const card = cardinal4(heading);
+    const bigLbl = bigLabelForDegree(heading);
+    const smallLbl = smallLabelForDegree(heading);
     ctx.fillStyle = "#0f172a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `700 ${Math.round(size * 0.08)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-    ctx.fillText(`${Math.round(normalize(heading) ?? 0)}°`, cx, cy - Math.max(10, size * 0.01));
+    ctx.fillText(`${Math.round(normalize(heading) ?? 0)}°`, cx, cy - Math.max(12, size * 0.012));
     ctx.font = `700 ${Math.round(size * 0.04)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-    ctx.fillText(card, cx, cy + Math.max(18, size * 0.02));
+    ctx.fillText(card, cx, cy + Math.max(6, size * 0.004));
+    ctx.font = `600 ${Math.round(size * 0.03)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.fillText(`(${bigLbl} เสวย ${smallLbl} แทรก)`, cx, cy + Math.max(28, size * 0.04));
   }, [size, heading]);
 
   const topBarStyle = {
@@ -514,7 +532,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#fff", userSelect: "none" }}>
       {/* Top status bar */}
       <div style={topBarStyle}>
-        <span style={{ color: "#334155", fontSize: 14 }}>Compass</span>
+        <span style={{ color: "#334155", fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{heading.toFixed(2)}°</span>
       </div>
 
