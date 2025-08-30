@@ -403,7 +403,7 @@ export default function App() {
     ctx.fillStyle = "rgba(255,255,255,0.9)";
     ctx.fill();
 
-    // Big section labels (rotate with dial). Mapping: 0–45=>6, then 1,2,3,4,7,5,8
+    // Big section labels (rotate with dial). Mapping order clockwise
     const bigSlice = slice * (SEGMENTS / 8);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -445,6 +445,41 @@ export default function App() {
       }
     }
 
+    // Determine current big/small labels at the top index (12 o'clock)
+    const wrapPi2 = (a) => {
+      let x = a % (Math.PI * 2);
+      if (x < -Math.PI) x += Math.PI * 2;
+      if (x > Math.PI) x -= Math.PI * 2;
+      return x;
+    };
+    const angDist = (a, b) => Math.abs(wrapPi2(a - b));
+    const topAngle = -Math.PI / 2;
+
+    let currentBigIndex = 0;
+    let best = Infinity;
+    for (let b = 0; b < 8; b++) {
+      const mid = startAngle + b * bigSlice + bigSlice / 2;
+      const d = angDist(mid, topAngle);
+      if (d < best) {
+        best = d;
+        currentBigIndex = b;
+      }
+    }
+    const currentBigLabel = bigLabels[currentBigIndex];
+
+    let currentSmallIndex = 0;
+    best = Infinity;
+    for (let j = 0; j < 8; j++) {
+      const mid = startAngle + currentBigIndex * bigSlice + j * slice + slice / 2;
+      const d = angDist(mid, topAngle);
+      if (d < best) {
+        best = d;
+        currentSmallIndex = j;
+      }
+    }
+    const startIdx = seq.indexOf(currentBigLabel);
+    const currentSmallLabel = seq[(startIdx + currentSmallIndex) % 8];
+
     // Cardinal letters (rotate with dial)
     const cardinals = [
       { t: "N", d: 0 },
@@ -481,8 +516,9 @@ export default function App() {
 
     // Center readout: show heading + description (big/small labels)
     const card = cardinal4(heading);
-    const bigLbl = bigLabelForDegree(heading);
-    const smallLbl = smallLabelForDegree(heading);
+    // Use the label at the TOP index (12 o'clock) so it matches what the user faces
+    const bigLbl = currentBigLabel;
+    const smallLbl = currentSmallLabel;
     ctx.fillStyle = "#0f172a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
