@@ -33,6 +33,10 @@ export default function App() {
   const [showSmall, setShowSmall] = useState(true);
   const [currentBig, setCurrentBig] = useState(null);
   const [currentSmall, setCurrentSmall] = useState(null);
+  const [showAspects, setShowAspects] = useState(true);
+  const [userName, setUserName] = useState("");
+  const [birthNum, setBirthNum] = useState(null); // 1..7
+  const [showIntro, setShowIntro] = useState(false);
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
   const [altitudeM, setAltitudeM] = useState(null);
@@ -112,6 +116,19 @@ export default function App() {
     if (current) lines.push(current);
     return lines.slice(0, 6); // cap lines for box height
   }
+
+  // Intro modal bootstrap from localStorage
+  useEffect(() => {
+    try {
+      const n = localStorage.getItem("userName") || "";
+      const b = Number(localStorage.getItem("birthNum") || "");
+      if (n) setUserName(n);
+      if (Number.isFinite(b) && b >= 1 && b <= 7) setBirthNum(b);
+      if (!n || !b) setShowIntro(true);
+    } catch {
+      setShowIntro(true);
+    }
+  }, []);
 
   function inferContextAndMood(text) {
     const t = String(text || "");
@@ -581,6 +598,28 @@ export default function App() {
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
 
+    // Aspects ring (บริวาร/อายุ/เดช/ศรี/มูละ/อุตสาหะ/มนตรี/กาลี) placed per sector starting from user's birth number
+    if (showAspects && birthNum) {
+      const aspects = ["บริวาร", "อายุ", "เดช", "ศรี", "มูละ", "อุตสาหะ", "มนตรี", "กาลี"]; // clockwise
+      const startIndex = (birthNum - 1) % 8; // 1..7 map into 0..7
+      const ringR = outerR + 46; // outside the dial but inside tick labels
+      ctx.font = "600 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
+      ctx.fillStyle = "#0f172a";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (let s = 0; s < 8; s++) {
+        const label = aspects[(startIndex + s) % 8];
+        const a = (s * 45 - 90) * (Math.PI / 180) + dialRot + (45 * Math.PI / 180) / 2; // center of sector
+        const x = cx + ringR * Math.cos(a);
+        const y = cy + ringR * Math.sin(a);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(0);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+    }
+
     ctx.beginPath();
     ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
     ctx.lineWidth = 2;
@@ -781,6 +820,9 @@ export default function App() {
             <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(e.target.checked)} /> แทรก
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(e.target.checked)} /> บริวาร/อายุ/เดช/ศรี
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
             offset
             <input
               type="number"
@@ -842,6 +884,34 @@ export default function App() {
       {/* Bottom enable button for iOS permission UX */}
       {sensorStatus !== "active" && (
         <button onClick={onEnable} style={enableBtnStyle}>กดเปิดเข็มทิศ</button>
+      )}
+
+      {showIntro && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "grid", placeItems: "center", zIndex: 50 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: 16, width: "min(92vw, 420px)", boxShadow: "0 10px 30px rgba(0,0,0,.2)", fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", color: "#0f172a" }}>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 12 }}>เริ่มใช้งาน</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              <label style={{ fontSize: 14 }}>
+                ชื่อของคุณ
+                <input value={userName} onChange={(e)=>setUserName(e.target.value)} placeholder="เช่น สรา" style={{ width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }} />
+              </label>
+              <label style={{ fontSize: 14 }}>
+                คุณเกิดวันอะไร
+                <select value={birthNum ?? ''} onChange={(e)=>setBirthNum(Number(e.target.value)||null)} style={{ width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }}>
+                  <option value="">เลือกวันเกิด</option>
+                  <option value="1">อาทิตย์ (1)</option>
+                  <option value="2">จันทร์ (2)</option>
+                  <option value="3">อังคาร (3)</option>
+                  <option value="4">พุธ (4)</option>
+                  <option value="5">พฤหัสบดี (5)</option>
+                  <option value="6">ศุกร์ (6)</option>
+                  <option value="7">เสาร์ (7)</option>
+                </select>
+              </label>
+              <button onClick={()=>{ try{ localStorage.setItem("userName", userName||""); if (birthNum) localStorage.setItem("birthNum", String(birthNum)); }catch{} setShowIntro(false); }} style={{ marginTop: 8, padding: "10px 14px", borderRadius: 10, background: "#0f172a", color: "#fff", border: "1px solid #0f172a", fontWeight: 700 }}>เริ่มใช้งาน</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
