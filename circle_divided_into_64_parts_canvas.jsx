@@ -379,24 +379,19 @@ export default function App() {
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
 
-    // Big section labels per exact mapping.
-    // Ensure that when the dial rotates by heading, the sector centered at top
-    // corresponds to the correct logical section (0–45 => 6, then 1..).
+    // Big section labels per exact mapping (FIXED to screen, do not rotate)
     const bigSlice = slice * (SEGMENTS / 8);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = majorStroke;
     ctx.font = "bold 24px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     for (let b = 0; b < 8; b++) {
-      const a0 = startAngle + b * bigSlice;
-      const amid = a0 + bigSlice / 2;
+      // Fixed angles for sector centers: 22.5, 67.5, ..., 337.5 degrees
+      const sectorCenterDeg = (b * 45 + 22.5) % 360;
+      const angle = (sectorCenterDeg - 90) * (Math.PI / 180); // no rot applied
       const r = (outerR + innerR) / 2;
-      const x = cx + r * Math.cos(amid);
-      const y = cy + r * Math.sin(amid);
-      // Determine absolute degree at center of this sector for label mapping.
-      // Since the dial is rotated by heading, the absolute degree at the screen-top
-      // corresponds to (b*45 + 22.5 + heading) % 360 at this sector center.
-      const sectorCenterDeg = (b * 45 + 22.5 + heading) % 360;
+      const x = cx + r * Math.cos(angle);
+      const y = cy + r * Math.sin(angle);
       const lbl = bigLabelForDegree(sectorCenterDeg);
       ctx.fillText(String(lbl), x, y);
     }
