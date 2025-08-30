@@ -74,6 +74,13 @@ export default function App() {
   const headingRef = useRef(0);
   const rafRef = useRef(0);
   const preferWebkitRef = useRef(false);
+  const [offsetDeg, setOffsetDeg] = useState(() => {
+    const v = Number(localStorage.getItem("compassOffsetDeg") || "0");
+    return Number.isFinite(v) ? v : 0;
+  });
+  useEffect(() => {
+    try { localStorage.setItem("compassOffsetDeg", String(offsetDeg)); } catch {}
+  }, [offsetDeg]);
 
   function isIOS() {
     const ua = navigator.userAgent || "";
@@ -231,7 +238,7 @@ export default function App() {
   useEffect(() => {
     const animate = () => {
       const current = headingRef.current;
-      const target = targetHeadingRef.current;
+      const target = normalize(targetHeadingRef.current + offsetDeg) ?? 0;
       const diff = shortestAngleDelta(current, target);
       const smoothing = 0.15; // 0..1, higher = faster
       const next = normalize(current + diff * smoothing);
@@ -596,6 +603,15 @@ export default function App() {
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
             <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(e.target.checked)} /> แทรก
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+            offset
+            <input
+              type="number"
+              value={offsetDeg}
+              onChange={(e) => setOffsetDeg(Number(e.target.value) || 0)}
+              style={{ width: 56, padding: "2px 6px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff" }}
+            />
           </label>
         </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{heading.toFixed(2)}°</span>
