@@ -71,6 +71,7 @@ export default function App() {
   const targetHeadingRef = useRef(0);
   const headingRef = useRef(0);
   const rafRef = useRef(0);
+  const preferWebkitRef = useRef(false);
 
   useEffect(() => {
     headingRef.current = heading;
@@ -83,16 +84,52 @@ export default function App() {
     return d;
   }
 
+  // Compute a tilt-compensated heading from alpha/beta/gamma when webkit heading is not available.
+  function computeHeadingFromEuler(ev) {
+    if (
+      typeof ev?.alpha !== "number" ||
+      typeof ev?.beta !== "number" ||
+      typeof ev?.gamma !== "number" ||
+      !Number.isFinite(ev.alpha) ||
+      !Number.isFinite(ev.beta) ||
+      !Number.isFinite(ev.gamma)
+    ) {
+      return null;
+    }
+    const degtorad = Math.PI / 180;
+    const _z = ev.alpha * degtorad; // yaw
+    const _x = ev.beta * degtorad; // pitch
+    const _y = ev.gamma * degtorad; // roll
+
+    const cX = Math.cos(_x);
+    const cY = Math.cos(_y);
+    const cZ = Math.cos(_z);
+    const sX = Math.sin(_x);
+    const sY = Math.sin(_y);
+    const sZ = Math.sin(_z);
+
+    // Calculate Vx and Vy components
+    const Vx = -cZ * sY - sZ * sX * cY;
+    const Vy = -sZ * sY + cZ * sX * cY;
+
+    let heading = Math.atan2(Vx, Vy);
+    if (heading < 0) heading += Math.PI * 2;
+    const headingDeg = heading * (180 / Math.PI);
+    return headingDeg;
+  }
+
   function startSensors() {
     try {
       const handler = (ev) => {
         let hdg = null;
-        if (typeof ev?.webkitCompassHeading === "number") {
+        if (typeof ev?.webkitCompassHeading === "number" && Number.isFinite(ev.webkitCompassHeading)) {
           // iOS Safari provides absolute compass heading directly
           hdg = ev.webkitCompassHeading;
-        } else if (typeof ev?.alpha === "number") {
-          // Most browsers: alpha ≈ 0 at North; convert to clockwise degrees from North
-          hdg = 360 - ev.alpha;
+          preferWebkitRef.current = true; // prefer native compass heading on iOS
+        } else if (!preferWebkitRef.current && typeof ev?.alpha === "number" && Number.isFinite(ev.alpha)) {
+          // Fallback: compute tilt-compensated heading from alpha/beta/gamma
+          const compensated = computeHeadingFromEuler(ev);
+          hdg = compensated !== null ? compensated : 360 - ev.alpha;
         }
         const n = normalize(hdg);
         if (n !== null) targetHeadingRef.current = n;
@@ -146,6 +183,18 @@ export default function App() {
           await DeviceMotionEvent.requestPermission().catch(() => {});
         } catch {}
       }
+
+      // On iOS 13+, request absolute orientation if supported
+      try {
+        if (typeof window.DeviceOrientationEvent !== "undefined" && typeof window.DeviceOrientationEvent.requestPermission !== "function") {
+          // Some browsers expose deviceorientationabsolute separately; add a one-time listener to detect availability
+          window.addEventListener("deviceorientationabsolute", (ev) => {
+            if (typeof ev?.webkitCompassHeading === "number") {
+              preferWebkitRef.current = true;
+            }
+          }, { once: true, passive: true });
+        }
+      } catch {}
 
       const ok = startSensors();
       setSensorStatus(ok ? "active" : "unavailable");
