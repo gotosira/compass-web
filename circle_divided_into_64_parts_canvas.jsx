@@ -29,6 +29,8 @@ export default function App() {
   // Heading in degrees (0..360), 0 = North
   const [heading, setHeading] = useState(0);
   const [sensorStatus, setSensorStatus] = useState("idle");
+  const [showBig, setShowBig] = useState(true);
+  const [showSmall, setShowSmall] = useState(true);
 
   // ---------- lightweight tests (act like smoke tests) ----------
   useEffect(() => {
@@ -410,13 +412,15 @@ export default function App() {
     ctx.fillStyle = majorStroke;
     ctx.font = "600 28px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
-    for (let b = 0; b < 8; b++) {
-      const a0 = startAngle + b * bigSlice;
-      const amid = a0 + bigSlice / 2;
-      const r = (outerR + innerR) / 2;
-      const x = cx + r * Math.cos(amid);
-      const y = cy + r * Math.sin(amid);
-      ctx.fillText(String(bigLabels[b]), x, y);
+    if (showBig) {
+      for (let b = 0; b < 8; b++) {
+        const a0 = startAngle + b * bigSlice;
+        const amid = a0 + bigSlice / 2;
+        const r = (outerR + innerR) / 2;
+        const x = cx + r * Math.cos(amid);
+        const y = cy + r * Math.sin(amid);
+        ctx.fillText(String(bigLabels[b]), x, y);
+      }
     }
 
     // Sub‑labels inside each big section (8 per section)
@@ -427,21 +431,23 @@ export default function App() {
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    for (let b = 0; b < 8; b++) {
-      const sectionStartAngle = startAngle + b * bigSlice;
-      const sectionLabel = seq[b];
-      const startIdx = seq.indexOf(sectionLabel);
-      for (let j = 0; j < 8; j++) {
-        const label = seq[(startIdx + j) % 8];
-        const mid = sectionStartAngle + (j + 0.5) * slice;
-        const lx = cx + subR * Math.cos(mid);
-        const ly = cy + subR * Math.sin(mid);
-        // Keep numbers upright for readability
-        ctx.save();
-        ctx.translate(lx, ly);
-        ctx.rotate(-rot); // keep sub labels upright even as dial rotates
-        ctx.fillText(String(label), 0, 0);
-        ctx.restore();
+    if (showSmall) {
+      for (let b = 0; b < 8; b++) {
+        const sectionStartAngle = startAngle + b * bigSlice;
+        const sectionLabel = seq[b];
+        const startIdx = seq.indexOf(sectionLabel);
+        for (let j = 0; j < 8; j++) {
+          const label = seq[(startIdx + j) % 8];
+          const mid = sectionStartAngle + (j + 0.5) * slice;
+          const lx = cx + subR * Math.cos(mid);
+          const ly = cy + subR * Math.sin(mid);
+          // Keep numbers upright for readability
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(-rot); // keep sub labels upright even as dial rotates
+          ctx.fillText(String(label), 0, 0);
+          ctx.restore();
+        }
       }
     }
 
@@ -569,6 +575,14 @@ export default function App() {
       {/* Top status bar */}
       <div style={topBarStyle}>
         <span style={{ color: "#334155", fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(e.target.checked)} /> เสวย
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(e.target.checked)} /> แทรก
+          </label>
+        </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{heading.toFixed(2)}°</span>
       </div>
 
