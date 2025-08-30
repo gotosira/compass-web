@@ -379,7 +379,9 @@ export default function App() {
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
 
-    // Big section labels per exact mapping
+    // Big section labels per exact mapping.
+    // Ensure that when the dial rotates by heading, the sector centered at top
+    // corresponds to the correct logical section (0–45 => 6, then 1..).
     const bigSlice = slice * (SEGMENTS / 8);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -391,8 +393,10 @@ export default function App() {
       const r = (outerR + innerR) / 2;
       const x = cx + r * Math.cos(amid);
       const y = cy + r * Math.sin(amid);
-      // Determine absolute degree at center of this sector for label mapping
-      const sectorCenterDeg = (b * 45 + 22.5) % 360;
+      // Determine absolute degree at center of this sector for label mapping.
+      // Since the dial is rotated by heading, the absolute degree at the screen-top
+      // corresponds to (b*45 + 22.5 + heading) % 360 at this sector center.
+      const sectorCenterDeg = (b * 45 + 22.5 + heading) % 360;
       const lbl = bigLabelForDegree(sectorCenterDeg);
       ctx.fillText(String(lbl), x, y);
     }
@@ -431,14 +435,13 @@ export default function App() {
     ctx.fillStyle = "#111827";
     ctx.fill();
 
-    // Center readout (Apple-like): 0..45° to nearest cardinal + cardinal letter
-    const delta = deltaToNearestCardinal(heading);
+    // Center readout: show the absolute heading 0..359° and nearest 4-cardinal
     const card = cardinal4(heading);
     ctx.fillStyle = "#0f172a";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `700 ${Math.round(size * 0.08)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-    ctx.fillText(`${Math.round(delta)}°`, cx, cy - Math.max(10, size * 0.01));
+    ctx.fillText(`${Math.round(normalize(heading) ?? 0)}°`, cx, cy - Math.max(10, size * 0.01));
     ctx.font = `700 ${Math.round(size * 0.04)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.fillText(card, cx, cy + Math.max(18, size * 0.02));
   }, [size, heading]);
