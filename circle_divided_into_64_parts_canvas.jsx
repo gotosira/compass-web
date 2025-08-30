@@ -117,6 +117,19 @@ export default function App() {
     return lines.slice(0, 6); // cap lines for box height
   }
 
+  function birthDayName(n) {
+    const m = {
+      1: "อาทิตย์",
+      2: "จันทร์",
+      3: "อังคาร",
+      4: "พุธ",
+      5: "พฤหัสบดี",
+      6: "ศุกร์",
+      7: "เสาร์",
+    };
+    return m[n] || "";
+  }
+
   // Intro modal bootstrap from localStorage
   useEffect(() => {
     try {
@@ -601,15 +614,19 @@ export default function App() {
     // Aspects ring (บริวาร/อายุ/เดช/ศรี/มูละ/อุตสาหะ/มนตรี/กาลี) placed per sector starting from user's birth number
     if (showAspects && birthNum) {
       const aspects = ["บริวาร", "อายุ", "เดช", "ศรี", "มูละ", "อุตสาหะ", "มนตรี", "กาลี"]; // clockwise
-      const startIndex = (birthNum - 1) % 8; // 1..7 map into 0..7
+      // ให้ "บริวาร" เริ่มต้นที่ section ที่เป็นดาววันเกิดเสมอ:
+      // ดาววันเกิด (1..7) map -> section index (0..7) โดย section 0 คือด้านบน (N) ในระบบของเรา bigLabels[0] = 6
+      // เราจึงวาง aspect[0] (บริวาร) ที่ sector = birthNumMapped และไล่ตามเข็ม
+      const birthSection = (birthNum - 1) % 8; // 0..7
       const ringR = outerR + 46; // outside the dial but inside tick labels
       ctx.font = "600 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
       ctx.fillStyle = "#0f172a";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (let s = 0; s < 8; s++) {
-        const label = aspects[(startIndex + s) % 8];
-        const a = (s * 45 - 90) * (Math.PI / 180) + dialRot + (45 * Math.PI / 180) / 2; // center of sector
+        const label = aspects[s];
+        const sectorIndex = (birthSection + s) % 8; // sector relative to birth day
+        const a = (sectorIndex * 45 - 90) * (Math.PI / 180) + dialRot + (45 * Math.PI / 180) / 2; // center of sector
         const x = cx + ringR * Math.cos(a);
         const y = cy + ringR * Math.sin(a);
         ctx.save();
@@ -812,6 +829,11 @@ export default function App() {
       {/* Top status bar */}
       <div style={topBarStyle}>
         <span style={{ color: "#334155", fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
+        {userName && birthNum && (
+          <span style={{ color: "#0f172a", fontSize: 12, marginLeft: 8 }}>
+            ผู้ใช้: {userName} • เกิดวัน {birthDayName(birthNum)}
+          </span>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
             <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(e.target.checked)} /> เสวย
