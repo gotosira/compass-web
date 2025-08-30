@@ -111,6 +111,40 @@ export default function App() {
     return lines.slice(0, 6); // cap lines for box height
   }
 
+  function inferContextAndMood(text) {
+    const t = String(text || "");
+    const has = (arr) => arr.some((w) => t.includes(w));
+    let icon = "🧭";
+    let label = "ทั่วไป";
+    if (has(["ความรัก", "คู่", "แต่งงาน", "ชู้สาว", "คู่ครอง", "คนรัก", "ครอบครัว"])) {
+      icon = "❤️"; label = "ความรัก";
+    } else if (has(["คดี", "ฟ้อง", "กฎหมาย", "ศาล"])) {
+      icon = "⚖️"; label = "คดีความ";
+    } else if (has(["งาน", "ตำแหน่ง", "ว่าจ้าง", "สัญญา", "หุ้นส่วน", "โครงการ", "ราชการ"])) {
+      icon = "💼"; label = "งาน";
+    } else if (has(["ทรัพย์", "เงิน", "มรดก", "การเงิน", "ทรัพย์สิน", "อามิส", "สินจ้าง"])) {
+      icon = "💰"; label = "การเงิน";
+    } else if (has(["เดินทาง", "โยกย้าย", "ต่างแดน", "ถิ่นฐาน"])) {
+      icon = "✈️"; label = "เดินทาง/โยกย้าย";
+    } else if (has(["เจ็บป่วย", "โรค", "สุขภาพ", "ไข้", "หัวใจ"])) {
+      icon = "🩺"; label = "สุขภาพ";
+    } else if (has(["ขัดแย้ง", "ศัตรู", "กีดกัน", "อาฆาต", "แตกแยก", "ใส่ความ"])) {
+      icon = "⚠️"; label = "ความขัดแย้ง";
+    } else if (has(["ช่วยเหลือ", "อุปถัมภ์", "ค้ำจุน", "ปกป้อง", "อุปการะ"])) {
+      icon = "🤝"; label = "การช่วยเหลือ";
+    }
+
+    const goodWords = ["โอกาส", "สำเร็จ", "ช่วยเหลือ", "อุปถัมภ์", "ลาภ", "ยกย่อง", "อนุมัติ", "มรดก", "เติบโต", "ได้งาน", "ได้ทรัพย์", "สมปรารถนา", "พบเจอคนถูกใจ"];
+    const badWords = ["ปัญหา", "ขัดแย้ง", "ศัตรู", "ฟ้อง", "คดี", "อุบัติเหตุ", "สูญเสีย", "เจ็บป่วย", "อิจฉา", "ใส่ความ", "ยึด", "ยกเลิก", "ลัก", "ขโมย", "ไม่สำเร็จ", "ปฏิเสธ", "หนี้", "ค้ำประกัน", "รุนแรง", "แตกหัก", "กลั่นแกล้ง", "เสี่ยง"];
+    const goodScore = goodWords.reduce((s, w) => s + (t.includes(w) ? 1 : 0), 0);
+    const badScore = badWords.reduce((s, w) => s + (t.includes(w) ? 1 : 0), 0);
+    let mood = "neutral";
+    let moodIcon = "";
+    if (goodScore > badScore) { mood = "good"; moodIcon = "👍"; }
+    else if (badScore > goodScore) { mood = "bad"; moodIcon = "👎"; }
+    return { icon, label, mood, moodIcon };
+  }
+
   // --- Geolocation & reverse geocoding ---
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -719,7 +753,7 @@ export default function App() {
       ctx.clip();
       ctx.fillStyle = "#0f172a";
       ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-      ctx.textAlign = "left";
+      ctx.textAlign = "center";
       ctx.textBaseline = "top";
       // Header line with place/latlon/alt if available
       const meta = [
@@ -735,11 +769,14 @@ export default function App() {
       const textTop = boxY + boxPad + (meta ? Math.round(size * 0.034) + 6 : 0);
       ctx.fillStyle = "#0f172a";
       ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-      const lines = wrapText(ctx, meaning, boxW - boxPad * 2);
-      let ty = boxY + boxPad;
-      ty = textTop;
-      for (const ln of lines) {
-        ctx.fillText(ln, boxX + boxPad, ty);
+      const { icon, label, moodIcon } = inferContextAndMood(meaning);
+      // header context line
+      ctx.fillText(`${icon} ${label} ${moodIcon || ""}`.trim(), boxX + boxW / 2, textTop);
+      const bodyTop = textTop + Math.round(size * 0.042);
+      const bodyLines = wrapText(ctx, meaning, boxW - boxPad * 2);
+      let ty = bodyTop;
+      for (const ln of bodyLines) {
+        ctx.fillText(ln, boxX + boxW / 2, ty);
         ty += Math.round(size * 0.04);
       }
       ctx.restore();
