@@ -340,14 +340,14 @@ export default function App() {
     for (let deg = 0; deg < 360; deg += 5) {
       // Keep outer ticks/labels fixed relative to the screen (not rotating with heading)
       const angle = (deg - 90) * (Math.PI / 180);
-      const tickBase = outerR + 6;
-      const tickLen = deg % 30 === 0 ? 22 : deg % 10 === 0 ? 16 : 10;
+      const tickBase = outerR + 10;
+      const tickLen = deg % 30 === 0 ? 26 : deg % 10 === 0 ? 16 : 8;
       const tickTop = outerR + tickLen;
       ctx.beginPath();
       ctx.moveTo(cx + tickBase * Math.cos(angle), cy + tickBase * Math.sin(angle));
       ctx.lineTo(cx + tickTop * Math.cos(angle), cy + tickTop * Math.sin(angle));
-      ctx.lineWidth = deg % 30 === 0 ? 2 : 1;
-      ctx.strokeStyle = "#0f172a55";
+      ctx.lineWidth = deg % 30 === 0 ? 3 : 1;
+      ctx.strokeStyle = deg % 30 === 0 ? "#0f172a88" : "#0f172a44";
       ctx.stroke();
 
       if (!smallScreen && deg % 30 === 0) {
@@ -358,7 +358,7 @@ export default function App() {
         ctx.translate(lx, ly);
         ctx.rotate(0); // keep labels upright for mobile readability
         ctx.fillStyle = "#0f172a";
-        ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
+        ctx.font = "13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(String(deg), 0, 0);
@@ -379,12 +379,22 @@ export default function App() {
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
 
+    // Sub‑label track (soft background to improve legibility over radial lines)
+    const ringWidthPx = outerR - innerR;
+    const subTrackInner = innerR + ringWidthPx * 0.18;
+    const subTrackOuter = innerR + ringWidthPx * 0.42;
+    ctx.beginPath();
+    ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
+    ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fill();
+
     // Big section labels (rotate with dial). Mapping: 0–45=>6, then 1,2,3,4,7,5,8
     const bigSlice = slice * (SEGMENTS / 8);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = majorStroke;
-    ctx.font = "bold 24px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
+    ctx.font = "600 28px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
     for (let b = 0; b < 8; b++) {
       const a0 = startAngle + b * bigSlice;
@@ -397,9 +407,8 @@ export default function App() {
 
     // Sub‑labels inside each big section (8 per section)
     const seq = [6, 1, 2, 3, 4, 7, 5, 8];
-    const ringWidthPx = outerR - innerR;
     const subR = innerR + ringWidthPx * 0.28; // closer to inner ring to avoid clutter
-    const subFontPx = Math.max(10, Math.min(14, Math.round(size * 0.03)));
+    const subFontPx = Math.max(12, Math.min(16, Math.round(size * 0.035)));
     ctx.fillStyle = "#0f172a";
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
@@ -416,7 +425,7 @@ export default function App() {
         // Keep numbers upright for readability
         ctx.save();
         ctx.translate(lx, ly);
-        ctx.rotate(0);
+        ctx.rotate(-rot); // keep sub labels upright even as dial rotates
         ctx.fillText(String(label), 0, 0);
         ctx.restore();
       }
