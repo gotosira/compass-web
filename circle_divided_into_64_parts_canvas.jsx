@@ -29,11 +29,11 @@ export default function App() {
   // Heading in degrees (0..360), 0 = North
   const [heading, setHeading] = useState(0);
   const [sensorStatus, setSensorStatus] = useState("idle");
-  const [showBig, setShowBig] = useState(true);
-  const [showSmall, setShowSmall] = useState(true);
+  const [showBig, setShowBig] = useState(false);
+  const [showSmall, setShowSmall] = useState(false);
   const [currentBig, setCurrentBig] = useState(null);
   const [currentSmall, setCurrentSmall] = useState(null);
-  const [showAspects, setShowAspects] = useState(true);
+  const [showAspects, setShowAspects] = useState(false);
   const [userName, setUserName] = useState("");
   const [birthNum, setBirthNum] = useState(null); // 1..7
   const [showIntro, setShowIntro] = useState(false);
@@ -130,18 +130,21 @@ export default function App() {
     return m[n] || "";
   }
 
-  // Intro modal bootstrap from localStorage
+  // Intro bootstrap from localStorage; don't show modal until sensors active
   useEffect(() => {
     try {
       const n = localStorage.getItem("userName") || "";
       const b = Number(localStorage.getItem("birthNum") || "");
       if (n) setUserName(n);
       if (Number.isFinite(b) && b >= 1 && b <= 7) setBirthNum(b);
-      if (!n || !b) setShowIntro(true);
-    } catch {
-      setShowIntro(true);
-    }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    if (sensorStatus === "active") {
+      if (!userName || !birthNum) setShowIntro(true);
+    }
+  }, [sensorStatus]);
 
   function inferContextAndMood(text) {
     const t = String(text || "");
@@ -835,14 +838,14 @@ export default function App() {
           </span>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
-            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(e.target.checked)} /> เสวย
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(!!e.target.checked)} /> เสวย
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
-            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(e.target.checked)} /> แทรก
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(!!e.target.checked)} /> แทรก
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
-            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(e.target.checked)} /> บริวาร/อายุ/เดช/ศรี
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(!!e.target.checked)} /> บริวาร/อายุ/เดช/ศรี
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
             offset
@@ -886,7 +889,7 @@ export default function App() {
             </span>
           )}
         </div>
-        {currentBig!=null && currentSmall!=null && (
+        {sensorStatus === "active" && currentBig!=null && currentSmall!=null && (
           <div style={{ marginTop: 6 }}>
             {(() => {
               const key = `${currentBig}-${currentSmall}`;
