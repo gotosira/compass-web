@@ -193,6 +193,20 @@ export default function App() {
     return names[idx];
   }
 
+  // Big section mapping per requirement:
+  // [0,45):6, [45,90):1, [90,135):2, [135,180):3, [180,225):4, [225,270):7, [270,315):5, [315,360):8
+  function bigLabelForDegree(deg) {
+    const d = ((deg % 360) + 360) % 360;
+    if (d < 45) return 6;
+    if (d < 90) return 1;
+    if (d < 135) return 2;
+    if (d < 180) return 3;
+    if (d < 225) return 4;
+    if (d < 270) return 7;
+    if (d < 315) return 5;
+    return 8;
+  }
+
   // Draw the dial
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -298,8 +312,7 @@ export default function App() {
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
 
-    // Big section labels (6,1,2,3,4,7,5,8)
-    const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
+    // Big section labels per exact mapping
     const bigSlice = slice * (SEGMENTS / 8);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -311,7 +324,10 @@ export default function App() {
       const r = (outerR + innerR) / 2;
       const x = cx + r * Math.cos(amid);
       const y = cy + r * Math.sin(amid);
-      ctx.fillText(String(bigLabels[b]), x, y);
+      // Determine absolute degree at center of this sector for label mapping
+      const sectorCenterDeg = (b * 45 + 22.5) % 360;
+      const lbl = bigLabelForDegree(sectorCenterDeg);
+      ctx.fillText(String(lbl), x, y);
     }
 
     // Cardinal letters (rotate with dial)
