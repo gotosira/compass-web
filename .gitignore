@@ -1,0 +1,36 @@
+# Node / Vite
+node_modules/
+dist/
+.vite/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Env
+.env
+.env.*
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode / iOS
+ios/DerivedData/
+ios/build/
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
+**/*.xcodeproj/project.xcworkspace/xcuserdata/
+**/*.xcuserstate
+**/*.xccheckout
+
+# SwiftPM
+**/.build/
+**/Packages/
+**/.swiftpm/
+
+

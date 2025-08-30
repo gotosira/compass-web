@@ -1,0 +1,48 @@
+name: Compass
+options:
+  minimumXcodeGenVersion: 2.39.0
+  deploymentTarget:
+    iOS: 15.0
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: 15.0
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+packages: {}
+schemes:
+  Compass:
+    build:
+      targets:
+        Compass: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+      revealArchiveInOrganizer: true
+      customArchiveName: Compass
+
+targets:
+  Compass:
+    type: application
+    platform: iOS
+    deploymentTarget: 15.0
+    sources:
+      - path: Sources
+    resources:
+      - path: Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sira.Compass
+        INFOPLIST_FILE: Resources/Info.plist
+        TARGETED_DEVICE_FAMILY: 1
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0.0
+        ENABLE_PREVIEWS: YES
+    postCompileScripts: []

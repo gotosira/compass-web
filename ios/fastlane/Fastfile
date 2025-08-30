@@ -1,0 +1,64 @@
+# Fastlane configuration for Compass (iOS)
+# Usage:
+#  1) cp fastlane/.env.default fastlane/.env && edit your API key values
+#  2) bundle exec fastlane beta   (or: fastlane beta)
+
+default_platform(:ios)
+
+def api_key_from_env
+  # Prefer App Store Connect API Key via ENV to avoid 2FA prompts
+  key_id = ENV["ASC_KEY_ID"]
+  issuer_id = ENV["ASC_ISSUER_ID"]
+  key_content = ENV["ASC_KEY_CONTENT"] # base64 of .p8 content
+
+  if key_id.to_s.empty? || issuer_id.to_s.empty? || key_content.to_s.empty?
+    UI.user_error!("Missing ASC credentials. Fill fastlane/.env or set ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT")
+  end
+
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key_content: key_content,
+    is_key_content_base64: true
+  )
+end
+
+platform :ios do
+  desc "Increment build, archive, and upload to TestFlight"
+  lane :beta do
+    api_key = api_key_from_env
+
+    # Ensure build number increments automatically
+    increment_build_number(
+      xcodeproj: "Compass.xcodeproj"
+    )
+
+    # Build archive (Release)
+    build_app(
+      scheme: "Compass",
+      export_method: "app-store",
+      output_directory: "build",
+      clean: true
+    )
+
+    # Upload to TestFlight (internal by default)
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: false,
+      distribute_external: ENV["TF_DISTRIBUTE_EXTERNAL"] == "true",
+      groups: (ENV["TF_GROUPS"] || "").split(",").map(&:strip).reject(&:empty?),
+      notify_external_testers: ENV["TF_NOTIFY_TESTERS"] == "true",
+      changelog: ENV["TF_CHANGELOG"]
+    )
+  end
+
+  desc "Just build an .ipa (no upload)"
+  lane :build_only do
+    build_app(
+      scheme: "Compass",
+      export_method: "app-store",
+      output_directory: "build",
+      clean: true
+    )
+  end
+end
