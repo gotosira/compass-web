@@ -31,6 +31,8 @@ export default function App() {
   const [sensorStatus, setSensorStatus] = useState("idle");
   const [showBig, setShowBig] = useState(true);
   const [showSmall, setShowSmall] = useState(true);
+  const [currentBig, setCurrentBig] = useState(null);
+  const [currentSmall, setCurrentSmall] = useState(null);
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
   const [altitudeM, setAltitudeM] = useState(null);
@@ -677,6 +679,10 @@ export default function App() {
     const startIdx = seq.indexOf(currentBigLabel);
     const currentSmallLabel = seq[(startIdx + currentSmallIndex) % 8];
 
+    // expose for DOM meaning box
+    if (currentBig !== currentBigLabel) setCurrentBig(currentBigLabel);
+    if (currentSmall !== currentSmallLabel) setCurrentSmall(currentSmallLabel);
+
     // Cardinal letters (rotate with dial)
     const cardinals = [
       { t: "N", d: 0 },
@@ -726,61 +732,6 @@ export default function App() {
     ctx.font = `600 ${Math.round(size * 0.03)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.fillText(`(${bigLbl} เสวย ${smallLbl} แทรก)`, cx, cy + Math.max(28, size * 0.04));
 
-    // Bottom meaning box
-    const key = `${bigLbl}-${smallLbl}`;
-    const meaning = MEANINGS[key];
-    if (meaning) {
-      const boxW = Math.min(size * 0.9, 560);
-      const boxPad = 12;
-      const boxX = cx - boxW / 2;
-      // push box further down into free space below dial
-      const bottomMargin = Math.max(24, size * 0.06);
-      const boxH = Math.min(size * 0.22, 180);
-      const boxY = size - bottomMargin - boxH;
-      ctx.save();
-      ctx.beginPath();
-      const r = 12;
-      ctx.moveTo(boxX + r, boxY);
-      ctx.arcTo(boxX + boxW, boxY, boxX + boxW, boxY + boxH, r);
-      ctx.arcTo(boxX + boxW, boxY + boxH, boxX, boxY + boxH, r);
-      ctx.arcTo(boxX, boxY + boxH, boxX, boxY, r);
-      ctx.arcTo(boxX, boxY, boxX + boxW, boxY, r);
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.strokeStyle = "#e2e8f0";
-      ctx.lineWidth = 1;
-      ctx.fill();
-      ctx.stroke();
-      ctx.clip();
-      ctx.fillStyle = "#0f172a";
-      ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      // Header line with place/latlon/alt if available
-      const meta = [
-        place || undefined,
-        lat != null && lon != null ? formatLatLon(lat, lon) : undefined,
-        altitudeM != null ? `${altitudeM} m` : undefined,
-      ].filter(Boolean).join("   •   ");
-      if (meta) {
-        ctx.fillStyle = "#334155";
-        ctx.font = `600 ${Math.round(size * 0.028)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-        ctx.fillText(meta, boxX + boxPad, boxY + boxPad);
-      }
-      const textTop = boxY + boxPad + (meta ? Math.round(size * 0.034) + 6 : 0);
-      ctx.fillStyle = "#0f172a";
-      ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
-      const { icon, label, moodIcon } = inferContextAndMood(meaning);
-      // header context line
-      ctx.fillText(`${icon} ${label} ${moodIcon || ""}`.trim(), boxX + boxW / 2, textTop);
-      const bodyTop = textTop + Math.round(size * 0.042);
-      const bodyLines = wrapText(ctx, meaning, boxW - boxPad * 2);
-      let ty = bodyTop;
-      for (const ln of bodyLines) {
-        ctx.fillText(ln, boxX + boxW / 2, ty);
-        ty += Math.round(size * 0.04);
-      }
-      ctx.restore();
-    }
   }, [size, heading]);
 
   const topBarStyle = {
@@ -844,6 +795,49 @@ export default function App() {
 
       {/* Canvas */}
       <canvas ref={canvasRef} />
+
+      {/* Meaning panel pinned under the dial, never overlapping */}
+      <div style={{
+        position: "fixed",
+        left: "50%",
+        transform: "translateX(-50%)",
+        bottom: 96,
+        width: "min(90vw, 560px)",
+        zIndex: 5,
+        background: "rgba(255,255,255,0.95)",
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        boxShadow: "0 8px 18px rgba(0,0,0,.08)",
+        padding: 12,
+        textAlign: "center",
+        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+        color: "#0f172a",
+      }}>
+        <div style={{ color: "#334155", fontWeight: 600, fontSize: 13 }}>
+          {(place || (lat!=null&&lon!=null) || altitudeM!=null) && (
+            <span>
+              {place ? place + " • " : ""}
+              {lat!=null&&lon!=null ? formatLatLon(lat, lon) + " • " : ""}
+              {altitudeM!=null ? `${altitudeM} m` : ""}
+            </span>
+          )}
+        </div>
+        {currentBig!=null && currentSmall!=null && (
+          <div style={{ marginTop: 6 }}>
+            {(() => {
+              const key = `${currentBig}-${currentSmall}`;
+              const meaning = MEANINGS[key];
+              const { icon, label, moodIcon } = inferContextAndMood(meaning || "");
+              return (
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{icon} {label} {moodIcon || ""}</div>
+                  <div style={{ marginTop: 6, lineHeight: 1.4, whiteSpace: "pre-wrap", fontSize: 14 }}>{meaning || ""}</div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </div>
 
       {/* Bottom enable button for iOS permission UX */}
       {sensorStatus !== "active" && (
