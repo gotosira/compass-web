@@ -19,7 +19,8 @@ export default function App() {
 
   // Geometry (fixed for compass mode)
   const SEGMENTS = 64;
-  const PADDING = 110; // generous padding so labels won't clip on mobile
+  // Old fixed values made mobile cramped; compute responsive geometry during draw
+  const PADDING = 110;
   const INNER_R = 160;
 
   // Responsive canvas size
@@ -67,6 +68,13 @@ export default function App() {
   }, []);
 
   const listeners = [];
+  const targetHeadingRef = useRef(0);
+  const headingRef = useRef(0);
+  const rafRef = useRef(0);
+
+  useEffect(() => {
+    headingRef.current = heading;
+  }, [heading]);
 
   function normalize(deg) {
     if (typeof deg !== "number" || Number.isNaN(deg)) return null;
@@ -87,7 +95,7 @@ export default function App() {
           hdg = 360 - ev.alpha;
         }
         const n = normalize(hdg);
-        if (n !== null) setHeading(n);
+        if (n !== null) targetHeadingRef.current = n;
       };
       window.addEventListener("deviceorientationabsolute", handler, true);
       window.addEventListener("deviceorientation", handler, true);
@@ -147,6 +155,44 @@ export default function App() {
     }
   }
 
+  // --- heading smoothing (improves readability on mobile) ---
+  function shortestAngleDelta(from, to) {
+    let diff = (to - from) % 360;
+    if (diff < -180) diff += 360;
+    if (diff > 180) diff -= 360;
+    return diff;
+  }
+
+  useEffect(() => {
+    const animate = () => {
+      const current = headingRef.current;
+      const target = targetHeadingRef.current;
+      const diff = shortestAngleDelta(current, target);
+      const smoothing = 0.15; // 0..1, higher = faster
+      const next = normalize(current + diff * smoothing);
+      if (next !== null && Math.abs(diff) > 0.05) {
+        setHeading(next);
+      } else if (next !== null && Math.abs(diff) > 0) {
+        // snap when close
+        setHeading(target);
+      }
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  function dir16(deg) {
+    const names = [
+      "N", "NNE", "NE", "ENE",
+      "E", "ESE", "SE", "SSE",
+      "S", "SSW", "SW", "WSW",
+      "W", "WNW", "NW", "NNW",
+    ];
+    const idx = Math.round(((deg % 360) / 22.5)) % 16;
+    return names[idx];
+  }
+
   // Draw the dial
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -170,8 +216,11 @@ export default function App() {
 
     const cx = size / 2;
     const cy = size / 2;
-    const outerR = Math.min(cx, cy) - PADDING;
-    const innerR = INNER_R;
+    // Responsive geometry
+    const pad = Math.max(32, Math.min(size * 0.12, 96));
+    const outerR = Math.min(cx, cy) - pad;
+    const ringWidth = Math.max(28, Math.min(size * 0.24, 180));
+    const innerR = Math.max(outerR - ringWidth, 60);
 
     // Rotate dial by heading so top index is the forward direction
     const rot = (heading * Math.PI) / 180;
@@ -202,32 +251,36 @@ export default function App() {
         ctx.strokeStyle = majorStroke;
         ctx.stroke();
       }
+    }
 
-      // degree ticks + labels
-      const deg = (i * (360 / SEGMENTS)) % 360;
+    // Cleaner outer ticks for readability
+    const smallScreen = size < 480;
+    for (let deg = 0; deg < 360; deg += 5) {
       const angle = (deg - 90) * (Math.PI / 180) + rot;
-      const tickIn = outerR + 6;
-      const tickOut = outerR + 12;
+      const tickBase = outerR + 6;
+      const tickLen = deg % 30 === 0 ? 22 : deg % 10 === 0 ? 16 : 10;
+      const tickTop = outerR + tickLen;
       ctx.beginPath();
-      ctx.moveTo(cx + tickIn * Math.cos(angle), cy + tickIn * Math.sin(angle));
-      ctx.lineTo(cx + tickOut * Math.cos(angle), cy + tickOut * Math.sin(angle));
-      ctx.lineWidth = 1;
+      ctx.moveTo(cx + tickBase * Math.cos(angle), cy + tickBase * Math.sin(angle));
+      ctx.lineTo(cx + tickTop * Math.cos(angle), cy + tickTop * Math.sin(angle));
+      ctx.lineWidth = deg % 30 === 0 ? 2 : 1;
       ctx.strokeStyle = "#0f172a55";
       ctx.stroke();
 
-      // label (staggered)
-      const rText = outerR + (i % 2 === 0 ? 36 : 54);
-      const lx = cx + rText * Math.cos(angle);
-      const ly = cy + rText * Math.sin(angle);
-      ctx.save();
-      ctx.translate(lx, ly);
-      ctx.rotate(angle + Math.PI / 2);
-      ctx.fillStyle = "#0f172a";
-      ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(`${deg.toFixed(2)}°`, 0, 0);
-      ctx.restore();
+      if (!smallScreen && deg % 30 === 0) {
+        const labelR = outerR + 36;
+        const lx = cx + labelR * Math.cos(angle);
+        const ly = cy + labelR * Math.sin(angle);
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0); // keep labels upright for mobile readability
+        ctx.fillStyle = "#0f172a";
+        ctx.font = "12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(deg), 0, 0);
+        ctx.restore();
+      }
     }
 
     // Outer/inner rings
@@ -269,7 +322,7 @@ export default function App() {
     ctx.font = "bold 22px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     for (const c of cardinals) {
       const a = (c.d - 90) * (Math.PI / 180) + rot;
-      const r = outerR + 76;
+      const r = outerR + (smallScreen ? 56 : 68);
       const x = cx + r * Math.cos(a);
       const y = cy + r * Math.sin(a);
       ctx.fillText(c.t, x, y);
@@ -277,7 +330,7 @@ export default function App() {
 
     // Fixed top index marker (triangle at 12 o'clock)
     const top = -Math.PI / 2;
-    const r0 = outerR + 26;
+    const r0 = outerR + 22;
     const r1 = outerR + 8;
     const ax = cx + r0 * Math.cos(top);
     const ay = cy + r0 * Math.sin(top);
@@ -293,12 +346,14 @@ export default function App() {
     ctx.fillStyle = "#111827";
     ctx.fill();
 
-    // Center readout
+    // Center readout (large degrees + direction)
     ctx.fillStyle = "#0f172a";
-    ctx.font = "600 24px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`${heading.toFixed(2)}°`, cx, cy);
+    ctx.font = `600 ${Math.round(size * 0.07)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.fillText(`${heading.toFixed(0)}°`, cx, cy - Math.max(10, size * 0.01));
+    ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+    ctx.fillText(dir16(heading), cx, cy + Math.max(18, size * 0.02));
   }, [size, heading]);
 
   const topBarStyle = {
@@ -319,32 +374,37 @@ export default function App() {
     fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
   };
 
+  const enableBtnStyle = {
+    position: "fixed",
+    bottom: "max(16px, env(safe-area-inset-bottom))",
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 20,
+    padding: "14px 18px",
+    borderRadius: 12,
+    background: "#0f172a",
+    color: "#fff",
+    border: "1px solid #0f172a",
+    fontSize: 16,
+    fontWeight: 600,
+    boxShadow: "0 6px 20px rgba(15,23,42,.25)",
+  };
+
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#fff", userSelect: "none" }}>
       {/* Top status bar */}
       <div style={topBarStyle}>
         <span style={{ color: "#334155", fontSize: 14 }}>Compass</span>
-        {sensorStatus !== "active" && (
-          <button
-            onClick={onEnable}
-            style={{
-              padding: "6px 10px",
-              borderRadius: 9999,
-              background: "#0f172a",
-              color: "#fff",
-              border: "1px solid #0f172a",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            Enable compass
-          </button>
-        )}
         <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{heading.toFixed(2)}°</span>
       </div>
 
       {/* Canvas */}
       <canvas ref={canvasRef} />
+
+      {/* Bottom enable button for iOS permission UX */}
+      {sensorStatus !== "active" && (
+        <button onClick={onEnable} style={enableBtnStyle}>Enable compass</button>
+      )}
     </div>
   );
 }
