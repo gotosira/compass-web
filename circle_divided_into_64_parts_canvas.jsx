@@ -414,8 +414,8 @@ export default function App() {
     const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
     if (showBig) {
       for (let b = 0; b < 8; b++) {
-        const a0 = startAngle + b * bigSlice;
-        const amid = a0 + bigSlice / 2;
+        const a0 = startAngle - b * bigSlice;
+        const amid = a0 - bigSlice / 2; // center clockwise from top
         const r = (outerR + innerR) / 2;
         const x = cx + r * Math.cos(amid);
         const y = cy + r * Math.sin(amid);
@@ -433,12 +433,12 @@ export default function App() {
     ctx.textBaseline = "middle";
     if (showSmall) {
       for (let b = 0; b < 8; b++) {
-        const sectionStartAngle = startAngle + b * bigSlice;
+        const sectionStartAngle = startAngle - b * bigSlice;
         const sectionLabel = seq[b];
         const startIdx = seq.indexOf(sectionLabel);
         for (let j = 0; j < 8; j++) {
           const label = seq[(startIdx + j) % 8];
-          const mid = sectionStartAngle + (j + 0.5) * slice;
+          const mid = sectionStartAngle - (j + 0.5) * slice; // clockwise inside section
           const lx = cx + subR * Math.cos(mid);
           const ly = cy + subR * Math.sin(mid);
           // Keep numbers upright for readability
@@ -464,7 +464,7 @@ export default function App() {
     let currentBigIndex = 0;
     let best = Infinity;
     for (let b = 0; b < 8; b++) {
-      const mid = startAngle + b * bigSlice + bigSlice / 2;
+      const mid = startAngle - b * bigSlice - bigSlice / 2;
       const d = angDist(mid, topAngle);
       if (d < best) {
         best = d;
@@ -476,7 +476,7 @@ export default function App() {
     let currentSmallIndex = 0;
     best = Infinity;
     for (let j = 0; j < 8; j++) {
-      const mid = startAngle + currentBigIndex * bigSlice + j * slice + slice / 2;
+      const mid = startAngle - currentBigIndex * bigSlice - j * slice - slice / 2;
       const d = angDist(mid, topAngle);
       if (d < best) {
         best = d;
