@@ -75,6 +75,12 @@ export default function App() {
   const rafRef = useRef(0);
   const preferWebkitRef = useRef(false);
 
+  function isIOS() {
+    const ua = navigator.userAgent || "";
+    const iPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return /iP(hone|ad|od)/.test(ua) || iPadOS;
+  }
+
   useEffect(() => {
     headingRef.current = heading;
   }, [heading]);
@@ -124,14 +130,22 @@ export default function App() {
     try {
       const handler = (ev) => {
         let hdg = null;
-        if (typeof ev?.webkitCompassHeading === "number" && Number.isFinite(ev.webkitCompassHeading)) {
-          // iOS Safari provides absolute compass heading directly
-          hdg = ev.webkitCompassHeading;
-          preferWebkitRef.current = true; // prefer native compass heading on iOS
-        } else if (!preferWebkitRef.current && typeof ev?.alpha === "number" && Number.isFinite(ev.alpha)) {
-          // Fallback: compute tilt-compensated heading from alpha/beta/gamma
-          const compensated = computeHeadingFromEuler(ev);
-          hdg = compensated !== null ? compensated : 360 - ev.alpha;
+        const hasWebkit = typeof ev?.webkitCompassHeading === "number" && Number.isFinite(ev.webkitCompassHeading);
+        if (isIOS()) {
+          if (hasWebkit) {
+            hdg = ev.webkitCompassHeading;
+            preferWebkitRef.current = true;
+          } else {
+            // On iOS ignore non-webkit readings to avoid wrong offsets
+            return;
+          }
+        } else {
+          if (hasWebkit) {
+            hdg = ev.webkitCompassHeading;
+          } else if (typeof ev?.alpha === "number" && Number.isFinite(ev.alpha)) {
+            const compensated = computeHeadingFromEuler(ev);
+            hdg = compensated !== null ? compensated : 360 - ev.alpha;
+          }
         }
         const n = normalize(hdg);
         if (n !== null) targetHeadingRef.current = n;
