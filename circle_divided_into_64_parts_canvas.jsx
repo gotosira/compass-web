@@ -490,8 +490,9 @@ export default function App() {
 
     // Sub‑label track (soft background to improve legibility over radial lines)
     const ringWidthPx = outerR - innerR;
-    const subTrackOuter = Math.max(innerR + 6, outerR - 12);
-    const subTrackInner = Math.max(innerR + 4, subTrackOuter - 24);
+    // keep sub labels inside safely away from inner circle
+    const subTrackOuter = Math.max(innerR + 20, outerR - 20);
+    const subTrackInner = Math.max(innerR + 16, subTrackOuter - 28);
     ctx.beginPath();
     ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
     ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
@@ -520,7 +521,7 @@ export default function App() {
     const seq = [6, 1, 2, 3, 4, 7, 5, 8];
     const subR = (subTrackInner + subTrackOuter) / 2; // near outer ring
     const subFontPx = Math.max(12, Math.min(16, Math.round(size * 0.035)));
-    ctx.fillStyle = "#0f172a";
+    ctx.fillStyle = "#64748b"; // gray for sub labels
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -635,8 +636,10 @@ export default function App() {
       const boxW = Math.min(size * 0.9, 560);
       const boxPad = 12;
       const boxX = cx - boxW / 2;
-      const boxY = size - Math.min(size * 0.22, 200);
-      const boxH = Math.min(size * 0.18, 160);
+      // push box further down into free space below dial
+      const bottomMargin = Math.max(24, size * 0.06);
+      const boxH = Math.min(size * 0.22, 180);
+      const boxY = size - bottomMargin - boxH;
       ctx.save();
       ctx.beginPath();
       const r = 12;
