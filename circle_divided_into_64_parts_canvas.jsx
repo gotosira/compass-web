@@ -31,6 +31,11 @@ export default function App() {
   const [sensorStatus, setSensorStatus] = useState("idle");
   const [showBig, setShowBig] = useState(true);
   const [showSmall, setShowSmall] = useState(true);
+  const [lat, setLat] = useState(null);
+  const [lon, setLon] = useState(null);
+  const [altitudeM, setAltitudeM] = useState(null);
+  const [place, setPlace] = useState("");
+  const [geoStatus, setGeoStatus] = useState("idle");
 
   // ---------- lightweight tests (act like smoke tests) ----------
   useEffect(() => {
@@ -104,6 +109,64 @@ export default function App() {
     }
     if (current) lines.push(current);
     return lines.slice(0, 6); // cap lines for box height
+  }
+
+  // --- Geolocation & reverse geocoding ---
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGeoStatus("error");
+      return;
+    }
+    setGeoStatus("active");
+    const onPos = (pos) => {
+      const { latitude, longitude, altitude } = pos.coords || {};
+      if (typeof latitude === "number" && typeof longitude === "number") {
+        setLat(latitude);
+        setLon(longitude);
+      }
+      if (typeof altitude === "number") setAltitudeM(Math.round(altitude));
+    };
+    const onErr = () => setGeoStatus("error");
+    const id = navigator.geolocation.watchPosition(onPos, onErr, {
+      enableHighAccuracy: true,
+      maximumAge: 5000,
+      timeout: 15000,
+    });
+    return () => navigator.geolocation.clearWatch(id);
+  }, []);
+
+  useEffect(() => {
+    const fetchPlace = async () => {
+      if (lat == null || lon == null) return;
+      try {
+        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=th`;
+        const r = await fetch(url);
+        const j = await r.json();
+        const parts = [j.locality || j.city || j.localityInfo?.administrative?.[0]?.name, j.principalSubdivision, j.countryName].filter(Boolean);
+        setPlace(parts.join(", "));
+      } catch {}
+    };
+    fetchPlace();
+  }, [lat, lon]);
+
+  useEffect(() => {
+    const fetchAlt = async () => {
+      if (lat == null || lon == null || altitudeM != null) return;
+      try {
+        const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+        const j = await r.json();
+        if (Array.isArray(j.elevation) && typeof j.elevation[0] === "number") {
+          setAltitudeM(Math.round(j.elevation[0]));
+        }
+      } catch {}
+    };
+    fetchAlt();
+  }, [lat, lon, altitudeM]);
+
+  function formatLatLon(lat, lon) {
+    const n = lat >= 0 ? "N" : "S";
+    const e = lon >= 0 ? "E" : "W";
+    return `LAT: ${Math.abs(lat).toFixed(6)} ${n}   LNG: ${Math.abs(lon).toFixed(6)} ${e}`;
   }
 
   useEffect(() => {
@@ -658,8 +721,23 @@ export default function App() {
       ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
+      // Header line with place/latlon/alt if available
+      const meta = [
+        place || undefined,
+        lat != null && lon != null ? formatLatLon(lat, lon) : undefined,
+        altitudeM != null ? `${altitudeM} m` : undefined,
+      ].filter(Boolean).join("   •   ");
+      if (meta) {
+        ctx.fillStyle = "#334155";
+        ctx.font = `600 ${Math.round(size * 0.028)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
+        ctx.fillText(meta, boxX + boxPad, boxY + boxPad);
+      }
+      const textTop = boxY + boxPad + (meta ? Math.round(size * 0.034) + 6 : 0);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = `600 ${Math.round(size * 0.035)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
       const lines = wrapText(ctx, meaning, boxW - boxPad * 2);
       let ty = boxY + boxPad;
+      ty = textTop;
       for (const ln of lines) {
         ctx.fillText(ln, boxX + boxPad, ty);
         ty += Math.round(size * 0.04);
