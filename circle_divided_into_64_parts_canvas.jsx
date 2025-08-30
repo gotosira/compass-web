@@ -320,9 +320,10 @@ export default function App() {
     const ringWidth = Math.max(28, Math.min(size * 0.24, 180));
     const innerR = Math.max(outerR - ringWidth, 60);
 
-    // Rotate dial by heading so top index is the forward direction
+    // Rotate dial opposite to heading (like a real compass card)
     const rot = (heading * Math.PI) / 180;
-    const startAngle = -Math.PI / 2 + rot;
+    const dialRot = -rot;
+    const startAngle = -Math.PI / 2 + dialRot;
     const slice = (Math.PI * 2) / SEGMENTS;
 
     const minorStroke = "#0f172a33";
@@ -414,8 +415,8 @@ export default function App() {
     const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
     if (showBig) {
       for (let b = 0; b < 8; b++) {
-        const a0 = startAngle - b * bigSlice;
-        const amid = a0 - bigSlice / 2; // center clockwise from top
+        const a0 = startAngle + b * bigSlice;
+        const amid = a0 + bigSlice / 2;
         const r = (outerR + innerR) / 2;
         const x = cx + r * Math.cos(amid);
         const y = cy + r * Math.sin(amid);
@@ -433,18 +434,18 @@ export default function App() {
     ctx.textBaseline = "middle";
     if (showSmall) {
       for (let b = 0; b < 8; b++) {
-        const sectionStartAngle = startAngle - b * bigSlice;
+        const sectionStartAngle = startAngle + b * bigSlice;
         const sectionLabel = seq[b];
         const startIdx = seq.indexOf(sectionLabel);
         for (let j = 0; j < 8; j++) {
           const label = seq[(startIdx + j) % 8];
-          const mid = sectionStartAngle - (j + 0.5) * slice; // clockwise inside section
+          const mid = sectionStartAngle + (j + 0.5) * slice; // clockwise inside section
           const lx = cx + subR * Math.cos(mid);
           const ly = cy + subR * Math.sin(mid);
           // Keep numbers upright for readability
           ctx.save();
           ctx.translate(lx, ly);
-          ctx.rotate(-rot); // keep sub labels upright even as dial rotates
+          ctx.rotate(-dialRot); // keep sub labels upright even as dial rotates
           ctx.fillText(String(label), 0, 0);
           ctx.restore();
         }
@@ -464,7 +465,7 @@ export default function App() {
     let currentBigIndex = 0;
     let best = Infinity;
     for (let b = 0; b < 8; b++) {
-      const mid = startAngle - b * bigSlice - bigSlice / 2;
+      const mid = startAngle + b * bigSlice + bigSlice / 2;
       const d = angDist(mid, topAngle);
       if (d < best) {
         best = d;
@@ -476,7 +477,7 @@ export default function App() {
     let currentSmallIndex = 0;
     best = Infinity;
     for (let j = 0; j < 8; j++) {
-      const mid = startAngle - currentBigIndex * bigSlice - j * slice - slice / 2;
+      const mid = startAngle + currentBigIndex * bigSlice + j * slice + slice / 2;
       const d = angDist(mid, topAngle);
       if (d < best) {
         best = d;
@@ -495,7 +496,7 @@ export default function App() {
     ];
     ctx.font = "bold 22px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     for (const c of cardinals) {
-      const a = (c.d - 90) * (Math.PI / 180) + rot;
+      const a = (c.d - 90) * (Math.PI / 180) + dialRot;
       const r = outerR + (smallScreen ? 56 : 68);
       const x = cx + r * Math.cos(a);
       const y = cy + r * Math.sin(a);
