@@ -858,7 +858,7 @@ export default function App() {
     ctx.font = `600 ${Math.round(size * 0.03)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.fillText(`(${bigLbl} เสวย ${smallLbl} แทรก)`, cx, cy + Math.max(28, size * 0.04));
 
-  }, [size, heading]);
+  }, [size, heading, showBig, showSmall, showAspects, theme, birthNum]);
 
   const topBarStyle = {
     position: "fixed",
@@ -905,27 +905,10 @@ export default function App() {
           </span>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(!!e.target.checked)}
-              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.text : "transparent" }} /> เสวย
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(!!e.target.checked)}
-              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.text : "transparent" }} /> แทรก
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(!!e.target.checked)}
-              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.text : "transparent" }} /> บริวาร/อายุ/เดช/ศรี
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted }}>
-            offset
-            <input
-              type="number"
-              value={offsetDeg}
-              onChange={(e) => setOffsetDeg(Number(e.target.value) || 0)}
-              style={{ width: 56, padding: "2px 6px", borderRadius: 6, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }}
-            />
-          </label>
+          <button onClick={()=>setShowBig(!showBig)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.buttonBg : t.page, color: showBig ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>เสวย</button>
+          <button onClick={()=>setShowSmall(!showSmall)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.buttonBg : t.page, color: showSmall ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แทรก</button>
+          <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>บริวาร/อายุ/เดช/ศรี</button>
+          {/* removed offset field per request */}
           <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
             <option value="noon">Noon</option>
             <option value="dark">Dark</option>
