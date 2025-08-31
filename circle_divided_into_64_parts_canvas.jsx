@@ -86,6 +86,8 @@ export default function App() {
   const headingRef = useRef(0);
   const rafRef = useRef(0);
   const preferWebkitRef = useRef(false);
+  const chosenEventRef = useRef(null); // 'absolute' | 'relative'
+  const recentTargetsRef = useRef([]);
   const [offsetDeg, setOffsetDeg] = useState(() => {
     const v = Number(localStorage.getItem("compassOffsetDeg") || "0");
     return Number.isFinite(v) ? v : 0;
@@ -98,6 +100,10 @@ export default function App() {
     const ua = navigator.userAgent || "";
     const iPadOS = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
     return /iP(hone|ad|od)/.test(ua) || iPadOS;
+  }
+
+  function isAndroid() {
+    return /Android/i.test(navigator.userAgent || "");
   }
 
   function wrapText(ctx, text, maxWidth) {
@@ -371,7 +377,8 @@ export default function App() {
 
   function startSensors() {
     try {
-      const handler = (ev) => {
+      const handle = (ev, kind) => {
+        if (chosenEventRef.current && chosenEventRef.current !== kind) return; // ignore other stream
         let hdg = null;
         const hasWebkit = typeof ev?.webkitCompassHeading === "number" && Number.isFinite(ev.webkitCompassHeading);
         if (isIOS()) {
@@ -391,12 +398,37 @@ export default function App() {
           }
         }
         const n = normalize(hdg);
-        if (n !== null) targetHeadingRef.current = n;
+        if (n !== null) {
+          // Choose stream on first successful reading
+          if (!chosenEventRef.current) {
+            chosenEventRef.current = kind;
+          }
+
+          // Circular mean filter to reduce jitter (Android especially)
+          const buf = recentTargetsRef.current;
+          const maxLen = isAndroid() ? 7 : 3;
+          buf.push(n);
+          if (buf.length > maxLen) buf.shift();
+          let sx = 0, sy = 0;
+          for (const a of buf) {
+            const r = (a * Math.PI) / 180;
+            sx += Math.cos(r);
+            sy += Math.sin(r);
+          }
+          let avg = Math.atan2(sy, sx) * (180 / Math.PI);
+          avg = normalize(avg);
+          // Quantize small steps to mitigate micro-shake
+          const step = isAndroid() ? 1 : 0.5;
+          const quant = Math.round((avg || 0) / step) * step;
+          targetHeadingRef.current = normalize(quant) ?? avg;
+        }
       };
-      window.addEventListener("deviceorientationabsolute", handler, true);
-      window.addEventListener("deviceorientation", handler, true);
-      listeners.push(["deviceorientationabsolute", handler]);
-      listeners.push(["deviceorientation", handler]);
+      const handlerAbsolute = (ev) => handle(ev, "absolute");
+      const handlerRelative = (ev) => handle(ev, "relative");
+      window.addEventListener("deviceorientationabsolute", handlerAbsolute, { capture: true, passive: true });
+      window.addEventListener("deviceorientation", handlerRelative, { capture: true, passive: true });
+      listeners.push(["deviceorientationabsolute", handlerAbsolute]);
+      listeners.push(["deviceorientation", handlerRelative]);
       return true;
     } catch (e) {
       console.warn("startSensors failed", e);
@@ -476,7 +508,7 @@ export default function App() {
       const current = headingRef.current;
       const target = normalize(targetHeadingRef.current + offsetDeg) ?? 0;
       const diff = shortestAngleDelta(current, target);
-      const smoothing = 0.15; // 0..1, higher = faster
+      const smoothing = isAndroid() ? 0.10 : 0.15; // slower on Android to reduce shake
       const next = normalize(current + diff * smoothing);
       if (next !== null && Math.abs(diff) > 0.05) {
         setHeading(next);
