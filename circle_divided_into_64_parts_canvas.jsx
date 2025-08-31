@@ -37,6 +37,7 @@ export default function App() {
   const [userName, setUserName] = useState("");
   const [birthNum, setBirthNum] = useState(null); // 1..7
   const [showIntro, setShowIntro] = useState(false);
+  const [theme, setTheme] = useState("noon");
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
   const [altitudeM, setAltitudeM] = useState(null);
@@ -129,6 +130,68 @@ export default function App() {
     };
     return m[n] || "";
   }
+
+  // Themes for noon, dark, and red night mode
+  const THEMES = {
+    noon: {
+      page: "#ffffff",
+      bg: "#ffffff",
+      text: "#0f172a",
+      major: "#0f172a",
+      minor: "rgba(15,23,42,.2)",
+      tickMaj: "rgba(15,23,42,.53)",
+      tickMin: "rgba(15,23,42,.27)",
+      sub: "#64748b",
+      accent: "#111827",
+      topbarBg: "rgba(255,255,255,.85)",
+      topbarBorder: "#e2e8f0",
+      muted: "#334155",
+      overlayBg: "rgba(255,255,255,0.95)",
+      overlayBorder: "#e2e8f0",
+      buttonBg: "#0f172a",
+      buttonText: "#ffffff",
+      trackBg: "rgba(255,255,255,0.9)",
+    },
+    dark: {
+      page: "#0b1220",
+      bg: "#0b1220",
+      text: "#e5e7eb",
+      major: "#e5e7eb",
+      minor: "rgba(229,231,235,.2)",
+      tickMaj: "rgba(229,231,235,.55)",
+      tickMin: "rgba(229,231,235,.3)",
+      sub: "#94a3b8",
+      accent: "#f1f5f9",
+      topbarBg: "rgba(15,23,42,.7)",
+      topbarBorder: "#1f2937",
+      muted: "#cbd5e1",
+      overlayBg: "rgba(15,23,42,0.9)",
+      overlayBorder: "#1f2937",
+      buttonBg: "#e5e7eb",
+      buttonText: "#0b1220",
+      trackBg: "rgba(15,23,42,0.6)",
+    },
+    red: {
+      page: "#000000",
+      bg: "#000000",
+      text: "#ff584a",
+      major: "#ff584a",
+      minor: "rgba(255,88,74,.25)",
+      tickMaj: "rgba(255,88,74,.6)",
+      tickMin: "rgba(255,88,74,.3)",
+      sub: "rgba(255,88,74,.6)",
+      accent: "#ff584a",
+      topbarBg: "rgba(0,0,0,.7)",
+      topbarBorder: "#222",
+      muted: "#ff9a90",
+      overlayBg: "rgba(0,0,0,0.9)",
+      overlayBorder: "#222",
+      buttonBg: "#ff584a",
+      buttonText: "#000000",
+      trackBg: "rgba(0,0,0,0.6)",
+    },
+  };
+  const t = THEMES[theme] || THEMES.noon;
 
   // Intro bootstrap from localStorage; don't show modal until sensors active
   useEffect(() => {
@@ -784,7 +847,7 @@ export default function App() {
     // Use the label at the TOP index (12 o'clock) so it matches what the user faces
     const bigLbl = currentBigLabel;
     const smallLbl = currentSmallLabel;
-    ctx.fillStyle = "#0f172a";
+    ctx.fillStyle = t.text;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = `700 ${Math.round(size * 0.08)}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
@@ -833,34 +896,39 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#fff", userSelect: "none" }}>
       {/* Top status bar */}
-      <div style={topBarStyle}>
-        <span style={{ color: "#334155", fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
+      <div style={{...topBarStyle, background: t.topbarBg, border: `1px solid ${t.topbarBorder}`}}>
+        <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
         {userName && birthNum && (
-          <span style={{ color: "#0f172a", fontSize: 12, marginLeft: 8 }}>
+          <span style={{ color: t.text, fontSize: 12, marginLeft: 8 }}>
             ผู้ใช้: {userName} • เกิดวัน {birthDayName(birthNum)}
           </span>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
             <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(!!e.target.checked)} /> เสวย
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
             <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(!!e.target.checked)} /> แทรก
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
             <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(!!e.target.checked)} /> บริวาร/อายุ/เดช/ศรี
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#334155" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted }}>
             offset
             <input
               type="number"
               value={offsetDeg}
               onChange={(e) => setOffsetDeg(Number(e.target.value) || 0)}
-              style={{ width: 56, padding: "2px 6px", borderRadius: 6, border: "1px solid #cbd5e1", background: "#fff" }}
+              style={{ width: 56, padding: "2px 6px", borderRadius: 6, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }}
             />
           </label>
+          <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
+            <option value="noon">Noon</option>
+            <option value="dark">Dark</option>
+            <option value="red">Red night</option>
+          </select>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>{heading.toFixed(2)}°</span>
+        <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{heading.toFixed(2)}°</span>
       </div>
 
       {/* Canvas */}
@@ -874,16 +942,16 @@ export default function App() {
         bottom: 96,
         width: "min(90vw, 560px)",
         zIndex: 5,
-        background: "rgba(255,255,255,0.95)",
-        border: "1px solid #e2e8f0",
+        background: t.overlayBg,
+        border: `1px solid ${t.overlayBorder}`,
         borderRadius: 12,
         boxShadow: "0 8px 18px rgba(0,0,0,.08)",
         padding: 12,
         textAlign: "center",
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        color: "#0f172a",
+        color: t.text,
       }}>
-        <div style={{ color: "#334155", fontWeight: 600, fontSize: 13 }}>
+        <div style={{ color: t.muted, fontWeight: 600, fontSize: 13 }}>
           {(place || (lat!=null&&lon!=null) || altitudeM!=null) && (
             <span>
               {place ? place + " • " : ""}
