@@ -895,7 +895,7 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#fff", userSelect: "none" }}>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: t.page, userSelect: "none" }}>
       {/* Top status bar */}
       <div style={{...topBarStyle, background: t.topbarBg, border: `1px solid ${t.topbarBorder}`}}>
         <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
@@ -906,13 +906,16 @@ export default function App() {
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(!!e.target.checked)} /> เสวย
+            <input type="checkbox" checked={showBig} onChange={(e) => setShowBig(!!e.target.checked)}
+              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.text : "transparent" }} /> เสวย
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(!!e.target.checked)} /> แทรก
+            <input type="checkbox" checked={showSmall} onChange={(e) => setShowSmall(!!e.target.checked)}
+              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.text : "transparent" }} /> แทรก
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted, cursor: "pointer" }}>
-            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(!!e.target.checked)} /> บริวาร/อายุ/เดช/ศรี
+            <input type="checkbox" checked={showAspects} onChange={(e) => setShowAspects(!!e.target.checked)}
+              style={{ WebkitAppearance: "none", appearance: "none", width: 16, height: 16, borderRadius: 3, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.text : "transparent" }} /> บริวาร/อายุ/เดช/ศรี
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.muted }}>
             offset
@@ -946,7 +949,7 @@ export default function App() {
         background: t.overlayBg,
         border: `1px solid ${t.overlayBorder}`,
         borderRadius: 12,
-        boxShadow: "0 8px 18px rgba(0,0,0,.08)",
+        boxShadow: theme === 'noon' ? "0 8px 18px rgba(0,0,0,.08)" : "none",
         padding: 12,
         textAlign: "center",
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
