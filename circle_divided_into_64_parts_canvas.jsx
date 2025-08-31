@@ -35,7 +35,7 @@ export default function App() {
   const [currentSmall, setCurrentSmall] = useState(null);
   const [showAspects, setShowAspects] = useState(false);
   const [userName, setUserName] = useState("");
-  const [birthNum, setBirthNum] = useState(null); // 1..7
+  const [birthNum, setBirthNum] = useState(null); // now holds mapped direction number per spec
   const [showIntro, setShowIntro] = useState(false);
   const [theme, setTheme] = useState("noon");
   const [lat, setLat] = useState(null);
@@ -124,15 +124,16 @@ export default function App() {
     return lines.slice(0, 6); // cap lines for box height
   }
 
-  function birthDayName(n) {
+  function directionName(n) {
     const m = {
-      1: "อาทิตย์",
-      2: "จันทร์",
-      3: "อังคาร",
-      4: "พุธ",
-      5: "พฤหัสบดี",
-      6: "ศุกร์",
-      7: "เสาร์",
+      6: "เหนือ",
+      4: "ใต้",
+      2: "ตะวันออก",
+      5: "ตะวันตก",
+      1: "ตะวันออกเฉียงเหนือ",
+      3: "ตะวันตกเฉียงเหนือ",
+      8: "ตะวันออกเฉียงใต้",
+      7: "ตะวันตกเฉียงใต้",
     };
     return m[n] || "";
   }
@@ -459,7 +460,7 @@ export default function App() {
         try {
           const resp = await DeviceOrientationEvent.requestPermission();
           if (resp !== "granted") {
-            setSensorStatus("unavailable");
+          setSensorStatus("unavailable");
             return;
           }
         } catch (e) {
@@ -713,15 +714,15 @@ export default function App() {
         const labelR = outerR + 36;
         const lx = cx + labelR * Math.cos(angle);
         const ly = cy + labelR * Math.sin(angle);
-        ctx.save();
-        ctx.translate(lx, ly);
+      ctx.save();
+      ctx.translate(lx, ly);
         ctx.rotate(0); // keep labels upright for mobile readability
         ctx.fillStyle = t.text;
         ctx.font = "13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
         ctx.fillText(String(deg), 0, 0);
-        ctx.restore();
+      ctx.restore();
       }
     }
 
@@ -796,14 +797,14 @@ export default function App() {
     ctx.font = "600 28px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     const bigLabels = [6, 1, 2, 3, 4, 7, 5, 8];
     if (showBig) {
-      for (let b = 0; b < 8; b++) {
-        const a0 = startAngle + b * bigSlice;
-        const amid = a0 + bigSlice / 2;
-        const r = (outerR + innerR) / 2;
-        const x = cx + r * Math.cos(amid);
-        const y = cy + r * Math.sin(amid);
-        ctx.fillText(String(bigLabels[b]), x, y);
-      }
+    for (let b = 0; b < 8; b++) {
+      const a0 = startAngle + b * bigSlice;
+      const amid = a0 + bigSlice / 2;
+      const r = (outerR + innerR) / 2;
+      const x = cx + r * Math.cos(amid);
+      const y = cy + r * Math.sin(amid);
+      ctx.fillText(String(bigLabels[b]), x, y);
+    }
     }
 
     // Sub‑labels inside each big section (8 per section)
@@ -967,7 +968,7 @@ export default function App() {
           <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
           {userName && birthNum && (
             <span style={{ color: t.text, fontSize: 12 }}>
-              ผู้ใช้: {userName} • เกิดวัน {birthDayName(birthNum)}
+              ผู้ใช้: {userName} • บ้านหันไปทาง {directionName(birthNum)}
             </span>
           )}
         </div>
@@ -1047,16 +1048,17 @@ export default function App() {
                 <input value={userName} onChange={(e)=>setUserName(e.target.value)} placeholder="เช่น สรา" style={{ width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }} />
               </label>
               <label style={{ fontSize: 14 }}>
-                คุณเกิดวันอะไร
+                บ้านคุณหันไปทางไหน
                 <select value={birthNum ?? ''} onChange={(e)=>setBirthNum(Number(e.target.value)||null)} style={{ width: "100%", marginTop: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1" }}>
-                  <option value="">เลือกวันเกิด</option>
-                  <option value="1">อาทิตย์ (1)</option>
-                  <option value="2">จันทร์ (2)</option>
-                  <option value="3">อังคาร (3)</option>
-                  <option value="4">พุธ (4)</option>
-                  <option value="5">พฤหัสบดี (5)</option>
-                  <option value="6">ศุกร์ (6)</option>
-                  <option value="7">เสาร์ (7)</option>
+                  <option value="">เลือกทิศของบ้าน</option>
+                  <option value="6">เหนือ (6)</option>
+                  <option value="4">ใต้ (4)</option>
+                  <option value="2">ตะวันออก (2)</option>
+                  <option value="5">ตะวันตก (5)</option>
+                  <option value="1">ตะวันออกเฉียงเหนือ (1)</option>
+                  <option value="3">ตะวันตกเฉียงเหนือ (3)</option>
+                  <option value="8">ตะวันออกเฉียงใต้ (8)</option>
+                  <option value="7">ตะวันตกเฉียงใต้ (7)</option>
                 </select>
               </label>
               <button onClick={()=>{ try{ localStorage.setItem("userName", userName||""); if (birthNum) localStorage.setItem("birthNum", String(birthNum)); }catch{} setShowIntro(false); }} style={{ marginTop: 8, padding: "10px 14px", borderRadius: 10, background: "#0f172a", color: "#fff", border: "1px solid #0f172a", fontWeight: 700 }}>เริ่มใช้งาน</button>
