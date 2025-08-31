@@ -43,6 +43,17 @@ export default function App() {
   const [altitudeM, setAltitudeM] = useState(null);
   const [place, setPlace] = useState("");
   const [geoStatus, setGeoStatus] = useState("idle");
+  // Floor plan overlay state
+  const [planImage, setPlanImage] = useState(null);
+  const [planVisible, setPlanVisible] = useState(true);
+  const [planOpacity, setPlanOpacity] = useState(0.6);
+  const [planScale, setPlanScale] = useState(1);
+  const [planRotationDeg, setPlanRotationDeg] = useState(0);
+  const [planX, setPlanX] = useState(0);
+  const [planY, setPlanY] = useState(0);
+  const [planControlsOpen, setPlanControlsOpen] = useState(false);
+  const fileInputRef = useRef(null);
+  const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
   // ---------- lightweight tests (act like smoke tests) ----------
   useEffect(() => {
@@ -446,6 +457,48 @@ export default function App() {
     listeners.length = 0;
   }
 
+  // Drag to move plan overlay
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onDown = (e) => {
+      if (!planVisible || !planImage) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      planDragRef.current = { dragging: true, lastX: x - rect.left, lastY: y - rect.top };
+    };
+    const onMove = (e) => {
+      if (!planDragRef.current.dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches ? e.touches[0].clientX : e.clientX;
+      const y = e.touches ? e.touches[0].clientY : e.clientY;
+      const cx = x - rect.left;
+      const cy = y - rect.top;
+      const dx = cx - planDragRef.current.lastX;
+      const dy = cy - planDragRef.current.lastY;
+      planDragRef.current.lastX = cx;
+      planDragRef.current.lastY = cy;
+      setPlanX((v) => v + dx);
+      setPlanY((v) => v + dy);
+    };
+    const onUp = () => { planDragRef.current.dragging = false; };
+    canvas.addEventListener("mousedown", onDown, { passive: true });
+    canvas.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("mouseup", onUp, { passive: true });
+    canvas.addEventListener("touchstart", onDown, { passive: true });
+    canvas.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onUp, { passive: true });
+    return () => {
+      canvas.removeEventListener("mousedown", onDown, true);
+      canvas.removeEventListener("mousemove", onMove, true);
+      window.removeEventListener("mouseup", onUp, true);
+      canvas.removeEventListener("touchstart", onDown, true);
+      canvas.removeEventListener("touchmove", onMove, true);
+      window.removeEventListener("touchend", onUp, true);
+    };
+  }, [planVisible, planImage]);
+
   async function onEnable() {
     try {
       const needsOrientationPerm =
@@ -652,6 +705,27 @@ export default function App() {
     // Background (theme)
     ctx.fillStyle = t.bg;
     ctx.fillRect(0, 0, size, size);
+
+    // Draw floor plan beneath dial
+    if (planVisible && planImage && planImage.complete) {
+      try {
+        const img = planImage;
+        const cx = size / 2 + planX;
+        const cy = size / 2 + planY;
+        const angle = (planRotationDeg * Math.PI) / 180;
+        const maxSide = Math.min(size * 0.9, Math.max(img.width, img.height));
+        const baseScale = (Math.min(size, size) / maxSide) * 0.7; // fit within canvas
+        const scl = baseScale * planScale;
+        const w = img.width * scl;
+        const h = img.height * scl;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, planOpacity));
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      } catch {}
+    }
 
     const cx = size / 2;
     const cy = size / 2;
@@ -976,6 +1050,8 @@ export default function App() {
           <button onClick={()=>setShowBig(!showBig)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.buttonBg : t.page, color: showBig ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>เสวย</button>
           <button onClick={()=>setShowSmall(!showSmall)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.buttonBg : t.page, color: showSmall ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แทรก</button>
           <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>บริวาร/อายุ/เดช/ศรี</button>
+          {/* Plan controls toggler */}
+          <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: planControlsOpen ? t.buttonBg : t.page, color: planControlsOpen ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แปลนบ้าน</button>
           {/* removed offset field per request */}
           <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
             <option value="noon">Noon</option>
@@ -989,6 +1065,47 @@ export default function App() {
 
       {/* Canvas */}
       <canvas ref={canvasRef} />
+
+      {/* Plan controls panel */}
+      {planControlsOpen && (
+        <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", top: 62, zIndex: 12, width: "min(95vw, 720px)", background: t.overlayBg, border: `1px solid ${t.overlayBorder}`, borderRadius: 12, boxShadow: theme === 'noon' ? "0 8px 18px rgba(0,0,0,.08)" : "none", padding: 10, color: t.text }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={()=>fileInputRef.current?.click()} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>อัปโหลดแปลน</button>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e)=>{
+                const f = e.target.files && e.target.files[0];
+                if (!f) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const img = new Image();
+                  img.onload = () => setPlanImage(img);
+                  img.src = reader.result;
+                };
+                reader.readAsDataURL(f);
+              }} />
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: t.muted }}>
+                <input type="checkbox" checked={planVisible} onChange={(e)=>setPlanVisible(e.target.checked)} /> แสดง
+              </label>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                โปร่งใส
+                <input type="range" min={0} max={1} step={0.05} value={planOpacity} onChange={(e)=>setPlanOpacity(Number(e.target.value))} />
+              </label>
+              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                ซูม
+                <input type="range" min={0.2} max={3} step={0.05} value={planScale} onChange={(e)=>setPlanScale(Number(e.target.value))} />
+              </label>
+              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
+                หมุน
+                <input type="range" min={-180} max={180} step={1} value={planRotationDeg} onChange={(e)=>setPlanRotationDeg(Number(e.target.value))} />
+              </label>
+              <button onClick={()=>{ setPlanX(0); setPlanY(0); setPlanScale(1); setPlanRotationDeg(0); }} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>รีเซ็ต</button>
+            </div>
+            <div style={{ width: "100%", fontSize: 12, color: t.muted, marginTop: 4 }}>ลากนิ้วบนผืนผ้าใบเพื่อย้ายตำแหน่งแปลน</div>
+          </div>
+        </div>
+      )}
 
       {/* Meaning panel pinned under the dial, never overlapping */}
       <div style={{
