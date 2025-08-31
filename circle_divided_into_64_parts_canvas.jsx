@@ -143,6 +143,7 @@ export default function App() {
       tickMin: "rgba(15,23,42,.27)",
       sub: "#64748b",
       accent: "#111827",
+      outline: "#10b981",
       topbarBg: "rgba(255,255,255,.85)",
       topbarBorder: "#e2e8f0",
       muted: "#334155",
@@ -162,6 +163,7 @@ export default function App() {
       tickMin: "rgba(229,231,235,.3)",
       sub: "#94a3b8",
       accent: "#f1f5f9",
+      outline: "#22c55e",
       topbarBg: "rgba(15,23,42,.7)",
       topbarBorder: "#1f2937",
       muted: "#cbd5e1",
@@ -181,12 +183,33 @@ export default function App() {
       tickMin: "rgba(255,88,74,.3)",
       sub: "rgba(255,88,74,.6)",
       accent: "#ff584a",
+      outline: "#ff584a",
       topbarBg: "rgba(0,0,0,.7)",
       topbarBorder: "#222",
       muted: "#ff9a90",
       overlayBg: "rgba(0,0,0,0.9)",
       overlayBorder: "#222",
       buttonBg: "#ff584a",
+      buttonText: "#000000",
+      trackBg: "rgba(0,0,0,0.6)",
+    },
+    watch: {
+      page: "#000000",
+      bg: "#000000",
+      text: "#F9FAFB",
+      major: "#F9FAFB",
+      minor: "rgba(249,250,251,.18)",
+      tickMaj: "rgba(249,250,251,.6)",
+      tickMin: "rgba(249,250,251,.28)",
+      sub: "#94a3b8",
+      accent: "#00ff7f",
+      outline: "#00ff7f",
+      topbarBg: "rgba(0,0,0,.75)",
+      topbarBorder: "#1a1a1a",
+      muted: "#cbd5e1",
+      overlayBg: "rgba(0,0,0,0.9)",
+      overlayBorder: "#1a1a1a",
+      buttonBg: "#22c55e",
       buttonText: "#000000",
       trackBg: "rgba(0,0,0,0.6)",
     },
@@ -676,6 +699,16 @@ export default function App() {
     ctx.lineWidth = 2;
     ctx.strokeStyle = majorStroke;
     ctx.stroke();
+    // Outline glow (watch theme)
+    if (theme === 'watch') {
+      ctx.save();
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = t.outline;
+      ctx.strokeStyle = t.outline;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Aspects ring (บริวาร/อายุ/เดช/ศรี/มูละ/อุตสาหะ/มนตรี/กาลี) placed per sector starting from user's birth number
     if (showAspects && birthNum) {
@@ -915,6 +948,7 @@ export default function App() {
             <option value="noon">Noon</option>
             <option value="dark">Dark</option>
             <option value="red">Red night</option>
+            <option value="watch">Watch Night</option>
           </select>
         </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{heading.toFixed(2)}°</span>
