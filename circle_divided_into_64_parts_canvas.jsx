@@ -897,19 +897,21 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: t.page, userSelect: "none" }}>
       {/* Top status bar */}
-      <div style={{...topBarStyle, background: t.topbarBg, border: `1px solid ${t.topbarBorder}`}}>
-        <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
-        {userName && birthNum && (
-          <span style={{ color: t.text, fontSize: 12, marginLeft: 8 }}>
-            ผู้ใช้: {userName} • เกิดวัน {birthDayName(birthNum)}
-          </span>
-        )}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8 }}>
+      <div style={{...topBarStyle, background: t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 720px)", flexWrap: "wrap", justifyContent: "space-between"}}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
+          {userName && birthNum && (
+            <span style={{ color: t.text, fontSize: 12 }}>
+              ผู้ใช้: {userName} • เกิดวัน {birthDayName(birthNum)}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button onClick={()=>setShowBig(!showBig)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.buttonBg : t.page, color: showBig ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>เสวย</button>
           <button onClick={()=>setShowSmall(!showSmall)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.buttonBg : t.page, color: showSmall ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แทรก</button>
           <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>บริวาร/อายุ/เดช/ศรี</button>
           {/* removed offset field per request */}
-          <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 6, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
+          <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
             <option value="noon">Noon</option>
             <option value="dark">Dark</option>
             <option value="red">Red night</option>
@@ -926,8 +928,8 @@ export default function App() {
         position: "fixed",
         left: "50%",
         transform: "translateX(-50%)",
-        bottom: 96,
-        width: "min(90vw, 560px)",
+        bottom: "max(16px, env(safe-area-inset-bottom))",
+        width: "min(95vw, 720px)",
         zIndex: 5,
         background: t.overlayBg,
         border: `1px solid ${t.overlayBorder}`,
