@@ -593,8 +593,8 @@ export default function App() {
     ctx.reset?.();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Background
-    ctx.fillStyle = "#ffffff";
+    // Background (theme)
+    ctx.fillStyle = t.bg;
     ctx.fillRect(0, 0, size, size);
 
     const cx = size / 2;
@@ -613,8 +613,8 @@ export default function App() {
     const startAngle = -Math.PI / 2 + dialRot;
     const slice = (Math.PI * 2) / SEGMENTS;
 
-    const minorStroke = "#0f172a33";
-    const majorStroke = "#0f172a";
+    const minorStroke = t.minor;
+    const majorStroke = t.major;
 
     // Draw segment borders and bold lines every 8 slices
     for (let i = 0; i < SEGMENTS; i++) {
@@ -651,7 +651,7 @@ export default function App() {
       ctx.moveTo(cx + tickBase * Math.cos(angle), cy + tickBase * Math.sin(angle));
       ctx.lineTo(cx + tickTop * Math.cos(angle), cy + tickTop * Math.sin(angle));
       ctx.lineWidth = deg % 30 === 0 ? 3 : 1;
-      ctx.strokeStyle = deg % 30 === 0 ? "#0f172a88" : "#0f172a44";
+      ctx.strokeStyle = deg % 30 === 0 ? t.tickMaj : t.tickMin;
       ctx.stroke();
 
       if (!smallScreen && deg % 30 === 0) {
@@ -661,7 +661,7 @@ export default function App() {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(0); // keep labels upright for mobile readability
-        ctx.fillStyle = "#0f172a";
+        ctx.fillStyle = t.text;
         ctx.font = "13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -689,7 +689,7 @@ export default function App() {
       for (let i = 0; i < 8; i++) if (bigLabelsArr[i] === birthNum) { birthSection = i; break; }
       const ringR = outerR + 46; // outside the dial but inside tick labels
       ctx.font = "600 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
-      ctx.fillStyle = "#94a3b8"; // light gray text
+      ctx.fillStyle = t.sub; // theme sub text
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (let s = 0; s < 8; s++) {
@@ -720,7 +720,7 @@ export default function App() {
     ctx.beginPath();
     ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
     ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillStyle = t.trackBg;
     ctx.fill();
 
     // Big section labels (rotate with dial). Mapping order clockwise
@@ -745,7 +745,7 @@ export default function App() {
     const seq = [6, 1, 2, 3, 4, 7, 5, 8];
     const subR = (subTrackInner + subTrackOuter) / 2; // near outer ring
     const subFontPx = Math.max(13, Math.min(18, Math.round(size * 0.04)));
-    ctx.fillStyle = "#64748b"; // gray for sub labels
+    ctx.fillStyle = t.sub; // theme sub labels
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -816,6 +816,7 @@ export default function App() {
       { t: "W", d: 270 },
     ];
     ctx.font = "bold 22px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
+    ctx.fillStyle = t.text;
     for (const c of cardinals) {
       const a = (c.d - 90) * (Math.PI / 180) + dialRot;
       const r = outerR + (smallScreen ? 56 : 68);
@@ -839,7 +840,7 @@ export default function App() {
     ctx.lineTo(bx, by);
     ctx.lineTo(cxp, cyp);
     ctx.closePath();
-    ctx.fillStyle = "#111827";
+    ctx.fillStyle = t.accent;
     ctx.fill();
 
     // Center readout: show heading + description (big/small labels)
