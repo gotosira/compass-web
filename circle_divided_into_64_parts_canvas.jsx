@@ -536,12 +536,12 @@ export default function App() {
 
     const cx = size / 2;
     const cy = size / 2;
-    // Responsive geometry with larger safety margin so nothing is clipped
-    // We draw up to ~68px beyond the outer ring (cardinals) + tick/arrow slack
-    const outerFeatureExtent = 76; // px
-    const pad = Math.max(outerFeatureExtent, Math.min(size * 0.18, 140));
+    // Responsive geometry (slightly larger dial for readability)
+    // We draw up to ~64px beyond the outer ring (cardinals) + tick/arrow slack
+    const outerFeatureExtent = 64; // px
+    const pad = Math.max(outerFeatureExtent, Math.min(size * 0.12, 120));
     const outerR = Math.min(cx, cy) - pad;
-    const ringWidth = Math.max(28, Math.min(size * 0.24, 180));
+    const ringWidth = Math.max(32, Math.min(size * 0.30, 220));
     const innerR = Math.max(outerR - ringWidth, 60);
 
     // Rotate dial opposite to heading (like a real compass card)
@@ -617,13 +617,16 @@ export default function App() {
     // Aspects ring (บริวาร/อายุ/เดช/ศรี/มูละ/อุตสาหะ/มนตรี/กาลี) placed per sector starting from user's birth number
     if (showAspects && birthNum) {
       const aspects = ["บริวาร", "อายุ", "เดช", "ศรี", "มูละ", "อุตสาหะ", "มนตรี", "กาลี"]; // clockwise
-      // ให้ "บริวาร" เริ่มต้นที่ section ที่เป็นดาววันเกิดเสมอ:
-      // ดาววันเกิด (1..7) map -> section index (0..7) โดย section 0 คือด้านบน (N) ในระบบของเรา bigLabels[0] = 6
-      // เราจึงวาง aspect[0] (บริวาร) ที่ sector = birthNumMapped และไล่ตามเข็ม
-      const birthSection = (birthNum - 1) % 8; // 0..7
+      // ให้ "บริวาร" เริ่มต้นที่ section ที่เป็นดาววันเกิดเสมอ.
+      // ใช้ mapping ดาววันเกิด -> เลขใหญ่ของ section
+      // 1..7 (อาทิตย์..เสาร์) map to bigLabels index where bigLabels = [6,1,2,3,4,7,5,8]
+      // หาว่าเลขใหญ่ใดเท่ากับ birthNum แล้วใช้อินเด็กซ์นั้นเป็นจุดเริ่ม
+      const bigLabelsArr = [6, 1, 2, 3, 4, 7, 5, 8];
+      let birthSection = 0;
+      for (let i = 0; i < 8; i++) if (bigLabelsArr[i] === birthNum) { birthSection = i; break; }
       const ringR = outerR + 46; // outside the dial but inside tick labels
       ctx.font = "600 13px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
-      ctx.fillStyle = "#0f172a";
+      ctx.fillStyle = "#94a3b8"; // light gray text
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       for (let s = 0; s < 8; s++) {
@@ -678,7 +681,7 @@ export default function App() {
     // Sub‑labels inside each big section (8 per section)
     const seq = [6, 1, 2, 3, 4, 7, 5, 8];
     const subR = (subTrackInner + subTrackOuter) / 2; // near outer ring
-    const subFontPx = Math.max(12, Math.min(16, Math.round(size * 0.035)));
+    const subFontPx = Math.max(13, Math.min(18, Math.round(size * 0.04)));
     ctx.fillStyle = "#64748b"; // gray for sub labels
     ctx.font = `600 ${subFontPx}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
     ctx.textAlign = "center";
