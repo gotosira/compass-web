@@ -57,6 +57,8 @@ export default function App() {
   const [cameraOn, setCameraOn] = useState(false);
   const videoRef = useRef(null);
   const cameraStreamRef = useRef(null);
+  const [planFollowHeading, setPlanFollowHeading] = useState(false);
+  const [cameraZoom, setCameraZoom] = useState(1);
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -599,6 +601,10 @@ export default function App() {
         // snap when close
         setHeading(target);
       }
+      // If plan is following heading, update rotation continuously
+      if (planFollowHeading) {
+        setPlanRotationDeg(target);
+      }
       rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
@@ -760,6 +766,25 @@ export default function App() {
         ctx.rotate(angle);
         ctx.drawImage(img, -w / 2, -h / 2, w, h);
         ctx.restore();
+        // Draw reticle in AR mode to help alignment
+        if (cameraOn) {
+          const r = Math.min(size * 0.35, 180);
+          ctx.save();
+          ctx.strokeStyle = t.outline;
+          ctx.globalAlpha = 0.6;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(size/2, size/2, r, 0, Math.PI*2);
+          ctx.stroke();
+          // crosshair
+          ctx.beginPath();
+          ctx.moveTo(size/2 - r, size/2);
+          ctx.lineTo(size/2 + r, size/2);
+          ctx.moveTo(size/2, size/2 - r);
+          ctx.lineTo(size/2, size/2 + r);
+          ctx.stroke();
+          ctx.restore();
+        }
       } catch {}
     }
 
@@ -1091,11 +1116,20 @@ export default function App() {
           <button onClick={async()=>{
             if (!cameraOn) {
               try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraStreamRef.current = stream;
                 if (videoRef.current) {
                   videoRef.current.srcObject = stream;
                   await videoRef.current.play();
+                }
+                // Try to set zoom if supported
+                const track = stream.getVideoTracks?.()[0];
+                const capabilities = track?.getCapabilities?.() || {};
+                if (capabilities.zoom) {
+                  const settings = track.getSettings?.() || {};
+                  const target = Math.min(Math.max(capabilities.zoom.min, cameraZoom), capabilities.zoom.max);
+                  await track.applyConstraints({ advanced: [{ zoom: target }] }).catch(()=>{});
                 }
                 setCameraOn(true);
               } catch (e) {
@@ -1154,6 +1188,9 @@ export default function App() {
             }} />
             <button onClick={()=>{ setPlanX(0); setPlanY(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>กึ่งกลาง</button>
             <button onClick={()=>{ setPlanRotationDeg(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>ล็อกทิศเหนือ (0°)</button>
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>
+              <input type="checkbox" checked={planFollowHeading} onChange={(e)=>setPlanFollowHeading(e.target.checked)} /> ล็อกทับเข็ม (หมุนตามเข็ม)
+            </label>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>
               Snap: 
               <select value={rotationSnap} onChange={(e)=>setRotationSnap(Number(e.target.value))} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }}>
@@ -1175,13 +1212,37 @@ export default function App() {
               หมุน ({Math.round(planRotationDeg)}°)
               <input type="range" min={-180} max={180} step={rotationSnap} value={planRotationDeg} onChange={(e)=>setPlanRotationDeg(Number(e.target.value))} style={{ width: "100%" }} />
             </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+              <button onClick={()=>setPlanRotationDeg(d=>d-5)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>-5°</button>
+              <button onClick={()=>setPlanRotationDeg(d=>d-1)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>-1°</button>
+              <button onClick={()=>setPlanRotationDeg(d=>d+1)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>+1°</button>
+              <button onClick={()=>setPlanRotationDeg(d=>d+5)} style={{ padding: "8px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>+5°</button>
+            </div>
+            {cameraOn && (
+              <label style={{ fontSize: 12, color: t.muted }}>
+                กล้องซูม (ถ้ารองรับ)
+                <input type="range" min={1} max={5} step={0.1} value={cameraZoom} onChange={async(e)=>{
+                  const val = Number(e.target.value);
+                  setCameraZoom(val);
+                  try {
+                    const stream = cameraStreamRef.current;
+                    const track = stream?.getVideoTracks?.()[0];
+                    const caps = track?.getCapabilities?.() || {};
+                    if (caps.zoom) {
+                      const target = Math.min(Math.max(caps.zoom.min, val), caps.zoom.max);
+                      await track.applyConstraints({ advanced: [{ zoom: target }] }).catch(()=>{});
+                    }
+                  } catch {}
+                }} style={{ width: "100%" }} />
+              </label>
+            )}
             <div style={{ fontSize: 12, color: t.muted, textAlign: "center" }}>ลากนิ้วบนแคนวาสเพื่อย้ายตำแหน่งแปลน</div>
           </div>
         </div>
       )}
 
-      {/* Meaning panel pinned under the dial, never overlapping */}
-      <div style={{
+      {/* Meaning panel pinned under the dial, hidden in AR mode for visibility */}
+      {!cameraOn && <div style={{
         position: "fixed",
         left: "50%",
         transform: "translateX(-50%)",
@@ -1221,7 +1282,7 @@ export default function App() {
             })()}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Bottom enable button for iOS permission UX */}
       {sensorStatus !== "active" && (
