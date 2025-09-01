@@ -52,6 +52,11 @@ export default function App() {
   const [planX, setPlanX] = useState(0);
   const [planY, setPlanY] = useState(0);
   const [planControlsOpen, setPlanControlsOpen] = useState(false);
+  const [rotationSnap, setRotationSnap] = useState(1); // 1° or 5°
+  // Camera background (AR mode)
+  const [cameraOn, setCameraOn] = useState(false);
+  const videoRef = useRef(null);
+  const cameraStreamRef = useRef(null);
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -241,8 +246,32 @@ export default function App() {
       const b = Number(localStorage.getItem("birthNum") || "");
       if (n) setUserName(n);
       if (Number.isFinite(b) && b >= 1 && b <= 7) setBirthNum(b);
+      // restore overlay
+      const pv = localStorage.getItem("planVisible");
+      if (pv != null) setPlanVisible(pv === "true");
+      const po = Number(localStorage.getItem("planOpacity") || "");
+      if (Number.isFinite(po)) setPlanOpacity(Math.max(0, Math.min(1, po)));
+      const ps = Number(localStorage.getItem("planScale") || "");
+      if (Number.isFinite(ps)) setPlanScale(Math.max(0.2, Math.min(3, ps)));
+      const pr = Number(localStorage.getItem("planRotationDeg") || "");
+      if (Number.isFinite(pr)) setPlanRotationDeg(Math.max(-180, Math.min(180, pr)));
+      const px = Number(localStorage.getItem("planX") || "");
+      if (Number.isFinite(px)) setPlanX(px);
+      const py = Number(localStorage.getItem("planY") || "");
+      if (Number.isFinite(py)) setPlanY(py);
+      const rs = Number(localStorage.getItem("rotationSnap") || "");
+      if (rs === 1 || rs === 5) setRotationSnap(rs);
     } catch {}
   }, []);
+
+  // persist overlay settings
+  useEffect(()=>{ try{ localStorage.setItem("planVisible", String(planVisible)); }catch{} }, [planVisible]);
+  useEffect(()=>{ try{ localStorage.setItem("planOpacity", String(planOpacity)); }catch{} }, [planOpacity]);
+  useEffect(()=>{ try{ localStorage.setItem("planScale", String(planScale)); }catch{} }, [planScale]);
+  useEffect(()=>{ try{ localStorage.setItem("planRotationDeg", String(planRotationDeg)); }catch{} }, [planRotationDeg]);
+  useEffect(()=>{ try{ localStorage.setItem("planX", String(planX)); }catch{} }, [planX]);
+  useEffect(()=>{ try{ localStorage.setItem("planY", String(planY)); }catch{} }, [planY]);
+  useEffect(()=>{ try{ localStorage.setItem("rotationSnap", String(rotationSnap)); }catch{} }, [rotationSnap]);
 
   useEffect(() => {
     if (sensorStatus === "active") {
@@ -702,9 +731,14 @@ export default function App() {
     ctx.reset?.();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Background (theme)
-    ctx.fillStyle = t.bg;
-    ctx.fillRect(0, 0, size, size);
+    // Background (theme) – transparent when camera background is on
+    if (!cameraOn) {
+      ctx.fillStyle = t.bg;
+      ctx.fillRect(0, 0, size, size);
+    } else {
+      // leave transparent for video background
+      ctx.clearRect(0, 0, size, size);
+    }
 
     // Draw floor plan beneath dial
     if (planVisible && planImage && planImage.complete) {
@@ -712,7 +746,9 @@ export default function App() {
         const img = planImage;
         const cx = size / 2 + planX;
         const cy = size / 2 + planY;
-        const angle = (planRotationDeg * Math.PI) / 180;
+        // Apply snap to rotation
+        const snapped = Math.round(planRotationDeg / rotationSnap) * rotationSnap;
+        const angle = (snapped * Math.PI) / 180;
         const maxSide = Math.min(size * 0.9, Math.max(img.width, img.height));
         const baseScale = (Math.min(size, size) / maxSide) * 0.7; // fit within canvas
         const scl = baseScale * planScale;
@@ -1052,6 +1088,29 @@ export default function App() {
           <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>บริวาร/อายุ/เดช/ศรี</button>
           {/* Plan controls toggler */}
           <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: planControlsOpen ? t.buttonBg : t.page, color: planControlsOpen ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แปลนบ้าน</button>
+          <button onClick={async()=>{
+            if (!cameraOn) {
+              try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+                cameraStreamRef.current = stream;
+                if (videoRef.current) {
+                  videoRef.current.srcObject = stream;
+                  await videoRef.current.play();
+                }
+                setCameraOn(true);
+              } catch (e) {
+                console.warn("Camera start failed", e);
+                setCameraOn(false);
+              }
+            } else {
+              try {
+                const s = cameraStreamRef.current;
+                s?.getTracks?.().forEach((tr)=>tr.stop());
+                cameraStreamRef.current = null;
+              } catch {}
+              setCameraOn(false);
+            }
+          }} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: cameraOn ? t.buttonBg : t.page, color: cameraOn ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>{cameraOn?"ปิดกล้อง":"ส่องแปลน"}</button>
           {/* removed offset field per request */}
           <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
             <option value="noon">Noon</option>
@@ -1063,46 +1122,60 @@ export default function App() {
         <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{heading.toFixed(2)}°</span>
       </div>
 
+      {/* Camera background video (behind canvas) */}
+      {cameraOn && (
+        <video ref={videoRef} playsInline muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0 }} />
+      )}
       {/* Canvas */}
-      <canvas ref={canvasRef} />
+      <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", inset: cameraOn?0:"auto", zIndex: cameraOn?1:"auto" }} />
 
-      {/* Plan controls panel */}
+      {/* Plan controls bottom-sheet */}
       {planControlsOpen && (
-        <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", top: 62, zIndex: 12, width: "min(95vw, 720px)", background: t.overlayBg, border: `1px solid ${t.overlayBorder}`, borderRadius: 12, boxShadow: theme === 'noon' ? "0 8px 18px rgba(0,0,0,.08)" : "none", padding: 10, color: t.text }}>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={()=>fileInputRef.current?.click()} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>อัปโหลดแปลน</button>
-              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e)=>{
-                const f = e.target.files && e.target.files[0];
-                if (!f) return;
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const img = new Image();
-                  img.onload = () => setPlanImage(img);
-                  img.src = reader.result;
-                };
-                reader.readAsDataURL(f);
-              }} />
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: t.muted }}>
-                <input type="checkbox" checked={planVisible} onChange={(e)=>setPlanVisible(e.target.checked)} /> แสดง
-              </label>
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30, background: t.overlayBg, borderTop: `1px solid ${t.overlayBorder}`, borderRadius: "12px 12px 0 0", boxShadow: theme === 'noon' ? "0 -8px 18px rgba(0,0,0,.08)" : "none", padding: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontWeight: 700, color: t.text }}>แปลนบ้าน</div>
+            <button onClick={()=>setPlanControlsOpen(false)} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>ปิด</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button onClick={()=>fileInputRef.current?.click()} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>อัปโหลดแปลน</button>
+            <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>
+              <input type="checkbox" checked={planVisible} onChange={(e)=>setPlanVisible(e.target.checked)} /> แสดง
+            </label>
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e)=>{
+              const f = e.target.files && e.target.files[0];
+              if (!f) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const img = new Image();
+                img.onload = () => setPlanImage(img);
+                img.src = reader.result;
+              };
+              reader.readAsDataURL(f);
+            }} />
+            <button onClick={()=>{ setPlanX(0); setPlanY(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>กึ่งกลาง</button>
+            <button onClick={()=>{ setPlanRotationDeg(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>ล็อกทิศเหนือ (0°)</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>
+              Snap: 
+              <select value={rotationSnap} onChange={(e)=>setRotationSnap(Number(e.target.value))} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }}>
+                <option value={1}>1°</option>
+                <option value={5}>5°</option>
+              </select>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
-                โปร่งใส
-                <input type="range" min={0} max={1} step={0.05} value={planOpacity} onChange={(e)=>setPlanOpacity(Number(e.target.value))} />
-              </label>
-              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
-                ซูม
-                <input type="range" min={0.2} max={3} step={0.05} value={planScale} onChange={(e)=>setPlanScale(Number(e.target.value))} />
-              </label>
-              <label style={{ fontSize: 12, color: t.muted, display: "flex", alignItems: "center", gap: 6 }}>
-                หมุน
-                <input type="range" min={-180} max={180} step={1} value={planRotationDeg} onChange={(e)=>setPlanRotationDeg(Number(e.target.value))} />
-              </label>
-              <button onClick={()=>{ setPlanX(0); setPlanY(0); setPlanScale(1); setPlanRotationDeg(0); }} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>รีเซ็ต</button>
-            </div>
-            <div style={{ width: "100%", fontSize: 12, color: t.muted, marginTop: 4 }}>ลากนิ้วบนผืนผ้าใบเพื่อย้ายตำแหน่งแปลน</div>
+          </div>
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            <label style={{ fontSize: 12, color: t.muted }}>
+              โปร่งใส ({Math.round(planOpacity*100)}%)
+              <input type="range" min={0} max={1} step={0.05} value={planOpacity} onChange={(e)=>setPlanOpacity(Number(e.target.value))} style={{ width: "100%" }} />
+            </label>
+            <label style={{ fontSize: 12, color: t.muted }}>
+              ซูม ({planScale.toFixed(2)}x)
+              <input type="range" min={0.2} max={3} step={0.05} value={planScale} onChange={(e)=>setPlanScale(Number(e.target.value))} style={{ width: "100%" }} />
+            </label>
+            <label style={{ fontSize: 12, color: t.muted }}>
+              หมุน ({Math.round(planRotationDeg)}°)
+              <input type="range" min={-180} max={180} step={rotationSnap} value={planRotationDeg} onChange={(e)=>setPlanRotationDeg(Number(e.target.value))} style={{ width: "100%" }} />
+            </label>
+            <div style={{ fontSize: 12, color: t.muted, textAlign: "center" }}>ลากนิ้วบนแคนวาสเพื่อย้ายตำแหน่งแปลน</div>
           </div>
         </div>
       )}
