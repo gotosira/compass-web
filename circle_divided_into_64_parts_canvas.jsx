@@ -46,6 +46,7 @@ export default function App() {
   const [geoStatus, setGeoStatus] = useState("idle");
   // Floor plan overlay state
   const [planImage, setPlanImage] = useState(null);
+  const [planImageUrl, setPlanImageUrl] = useState("");
   const [planVisible, setPlanVisible] = useState(true);
   const [planOpacity, setPlanOpacity] = useState(0.6);
   const [planScale, setPlanScale] = useState(1);
@@ -62,6 +63,43 @@ export default function App() {
   const [cameraZoom, setCameraZoom] = useState(1);
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
+
+  // Helper: load Image from data URL and update state
+  const loadPlanFromDataUrl = (dataUrl) => {
+    if (!dataUrl) return;
+    try {
+      const img = new Image();
+      img.onload = () => {
+        setPlanImage(img);
+        setPlanImageUrl(dataUrl);
+      };
+      img.src = dataUrl;
+    } catch {}
+  };
+
+  // Helper: compress file to dataURL (jpeg) to fit localStorage limits
+  const fileToCompressedDataUrl = (file) => new Promise((resolve) => {
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSide = 1600; // limit dimension to save space
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          resolve(dataUrl);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    } catch { resolve(""); }
+  });
 
   // ---------- lightweight tests (act like smoke tests) ----------
   useEffect(() => {
@@ -264,6 +302,8 @@ export default function App() {
       if (Number.isFinite(py)) setPlanY(py);
       const rs = Number(localStorage.getItem("rotationSnap") || "");
       if (rs === 1 || rs === 5) setRotationSnap(rs);
+      const pu = localStorage.getItem("planImageUrl") || "";
+      if (pu) loadPlanFromDataUrl(pu);
     } catch {}
   }, []);
 
@@ -275,6 +315,7 @@ export default function App() {
   useEffect(()=>{ try{ localStorage.setItem("planX", String(planX)); }catch{} }, [planX]);
   useEffect(()=>{ try{ localStorage.setItem("planY", String(planY)); }catch{} }, [planY]);
   useEffect(()=>{ try{ localStorage.setItem("rotationSnap", String(rotationSnap)); }catch{} }, [rotationSnap]);
+  useEffect(()=>{ try{ if (planImageUrl) localStorage.setItem("planImageUrl", planImageUrl); }catch{} }, [planImageUrl]);
 
   useEffect(() => {
     if (sensorStatus === "active") {
@@ -1208,13 +1249,11 @@ export default function App() {
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e)=>{
               const f = e.target.files && e.target.files[0];
               if (!f) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                const img = new Image();
-                img.onload = () => setPlanImage(img);
-                img.src = reader.result;
-              };
-              reader.readAsDataURL(f);
+              (async () => {
+                const dataUrl = await fileToCompressedDataUrl(f);
+                loadPlanFromDataUrl(dataUrl);
+                try { localStorage.setItem("planImageUrl", dataUrl); } catch {}
+              })();
             }} />
             <button onClick={()=>{ setPlanX(0); setPlanY(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>กึ่งกลาง</button>
             <button onClick={()=>{ setPlanRotationDeg(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>ล็อกทิศเหนือ (0°)</button>
@@ -1279,10 +1318,12 @@ export default function App() {
         bottom: "max(16px, env(safe-area-inset-bottom))",
         width: "min(95vw, 720px)",
         zIndex: 5,
-        background: t.overlayBg,
+        background: cameraOn ? (theme==='red' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.25)') : t.overlayBg,
         border: `1px solid ${t.overlayBorder}`,
         borderRadius: 12,
         boxShadow: theme === 'noon' ? "0 8px 18px rgba(0,0,0,.08)" : "none",
+        backdropFilter: cameraOn ? 'blur(10px)' : undefined,
+        WebkitBackdropFilter: cameraOn ? 'blur(10px)' : undefined,
         padding: 12,
         textAlign: "center",
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
