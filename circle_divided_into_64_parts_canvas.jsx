@@ -69,6 +69,7 @@ export default function App() {
   const [uploadMs, setUploadMs] = useState(null);
   const [uploadError, setUploadError] = useState("");
   const [planGallery, setPlanGallery] = useState([]); // array of dataURLs (strings)
+  const [showSettings, setShowSettings] = useState(false);
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -1238,6 +1239,7 @@ export default function App() {
             <option value="red">Red night</option>
             <option value="watch">Watch Night</option>
           </select>
+          <button onClick={()=>setShowSettings(true)} style={{ padding: "4px 8px", borderRadius: 999, width: 32, height: 32, display: 'grid', placeItems: 'center', border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }} aria-label="Settings">⚙️</button>
         </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{heading.toFixed(2)}°</span>
       </div>
@@ -1358,12 +1360,12 @@ export default function App() {
                   {planGallery.map((src, idx) => (
                     <button key={idx} onClick={()=>loadPlanFromDataUrl(src)} style={{ border: `1px solid ${t.topbarBorder}`, borderRadius: 8, padding: 0, overflow: 'hidden', height: 56, background: t.page }}>
                       <img src={src} alt="plan" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    </button>
+          </button>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+        )}
+      </div>
         </div>
       )}
 
@@ -1441,6 +1443,37 @@ export default function App() {
                 </select>
               </label>
               <button onClick={()=>{ try{ localStorage.setItem("userName", userName||""); if (birthNum) localStorage.setItem("birthNum", String(birthNum)); }catch{} setShowIntro(false); }} style={{ marginTop: 8, padding: "10px 14px", borderRadius: 10, background: "#0f172a", color: "#fff", border: "1px solid #0f172a", fontWeight: 700 }}>เริ่มใช้งาน</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'grid', placeItems: 'center', zIndex: 60 }}>
+          <div style={{ background: '#fff', borderRadius: 14, padding: 16, width: 'min(92vw, 420px)', boxShadow: '0 10px 30px rgba(0,0,0,.2)', fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif', color: '#0f172a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>ตั้งค่า</div>
+              <button onClick={()=>setShowSettings(false)} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', fontSize: 12, fontWeight: 700 }}>ปิด</button>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <label style={{ fontSize: 14 }}>
+                ชื่อของคุณ
+                <input value={userName} onChange={(e)=>{ setUserName(e.target.value); try{ localStorage.setItem('userName', e.target.value||''); }catch{} }} style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1' }} />
+              </label>
+              <label style={{ fontSize: 14 }}>
+                บ้านคุณหันไปทางไหน
+                <select value={birthNum ?? ''} onChange={(e)=>{ const v = Number(e.target.value)||null; setBirthNum(v); try{ if (v) localStorage.setItem('birthNum', String(v)); }catch{} }} style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1' }}>
+                  <option value="">เลือกทิศของบ้าน</option>
+                  <option value="6">เหนือ (6)</option>
+                  <option value="4">ใต้ (4)</option>
+                  <option value="2">ตะวันออก (2)</option>
+                  <option value="5">ตะวันตก (5)</option>
+                  <option value="1">ตะวันออกเฉียงเหนือ (1)</option>
+                  <option value="3">ตะวันตกเฉียงเหนือ (3)</option>
+                  <option value="8">ตะวันออกเฉียงใต้ (8)</option>
+                  <option value="7">ตะวันตกเฉียงใต้ (7)</option>
+                </select>
+              </label>
             </div>
           </div>
         </div>
