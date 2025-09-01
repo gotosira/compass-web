@@ -54,6 +54,9 @@ export default function App() {
   const [planX, setPlanX] = useState(0);
   const [planY, setPlanY] = useState(0);
   const [planControlsOpen, setPlanControlsOpen] = useState(false);
+  const [planSheetLevel, setPlanSheetLevel] = useState("peek"); // 'peek' | 'half' | 'full'
+  const [planSheetDragH, setPlanSheetDragH] = useState(null); // px during drag
+  const planSheetDragRef = useRef({ active: false, startY: 0, startH: 0 });
   const [rotationSnap, setRotationSnap] = useState(1); // 1° or 5°
   // Camera background (AR mode)
   const [cameraOn, setCameraOn] = useState(false);
@@ -1247,10 +1250,20 @@ export default function App() {
 
       {/* Plan controls bottom-sheet */}
       {planControlsOpen && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30, background: t.overlayBg, borderTop: `1px solid ${t.overlayBorder}`, borderRadius: "12px 12px 0 0", boxShadow: theme === 'noon' ? "0 -8px 18px rgba(0,0,0,.08)" : "none", padding: 12 }}>
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30, background: t.overlayBg, borderTop: `1px solid ${t.overlayBorder}`, borderRadius: "12px 12px 0 0", boxShadow: theme === 'noon' ? "0 -8px 18px rgba(0,0,0,.08)" : "none", padding: 12, height: planSheetDragH!=null ? planSheetDragH : (planSheetLevel==='full'? '75vh' : planSheetLevel==='half'? '45vh' : '26vh'), overflow: 'auto', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          onMouseDown={(e)=>{ planSheetDragRef.current = { active: true, startY: e.clientY, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
+          onMouseMove={(e)=>{ if (!planSheetDragRef.current.active) return; const dy = planSheetDragRef.current.startY - e.clientY; const nh = Math.max(120, Math.min(window.innerHeight*0.9, planSheetDragRef.current.startH + dy)); setPlanSheetDragH(nh); }}
+          onMouseUp={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); }}
+          onTouchStart={(e)=>{ const y = e.touches[0].clientY; planSheetDragRef.current = { active: true, startY: y, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
+          onTouchMove={(e)=>{ if (!planSheetDragRef.current.active) return; const y = e.touches[0].clientY; const dy = planSheetDragRef.current.startY - y; const nh = Math.max(120, Math.min(window.innerHeight*0.9, planSheetDragRef.current.startH + dy)); setPlanSheetDragH(nh); }}
+          onTouchEnd={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); }}
+        >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontWeight: 700, color: t.text }}>แปลนบ้าน</div>
             <button onClick={()=>setPlanControlsOpen(false)} style={{ padding: "6px 10px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12, fontWeight: 700 }}>ปิด</button>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: t.topbarBorder, marginBottom: 8 }} />
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <button onClick={()=>fileInputRef.current?.click()} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>อัปโหลดแปลน</button>
