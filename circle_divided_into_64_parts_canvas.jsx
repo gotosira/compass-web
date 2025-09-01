@@ -127,8 +127,8 @@ export default function App() {
   useEffect(() => {
     const update = () => {
       const m = Math.min(window.innerWidth, window.innerHeight);
-      // keep a small margin so outer labels aren't cut off
-      setSize(Math.max(320, Math.min(1600, Math.floor(m - 16))));
+      // maximize canvas to full viewport min dimension
+      setSize(Math.max(320, Math.min(1600, Math.floor(m))));
     };
     update();
     window.addEventListener("resize", update);
@@ -863,10 +863,10 @@ export default function App() {
     const cy = size / 2;
     // Responsive geometry (slightly larger dial for readability)
     // We draw up to ~64px beyond the outer ring (cardinals) + tick/arrow slack
-    const outerFeatureExtent = 64; // px
-    const pad = Math.max(outerFeatureExtent, Math.min(size * 0.12, 120));
+    const outerFeatureExtent = 48; // px, tighten to allow larger dial
+    const pad = Math.max(outerFeatureExtent, Math.min(size * 0.08, 96));
     const outerR = Math.min(cx, cy) - pad;
-    const ringWidth = Math.max(32, Math.min(size * 0.30, 220));
+    const ringWidth = Math.max(36, Math.min(size * 0.34, 240));
     const innerR = Math.max(outerR - ringWidth, 60);
 
     // Rotate dial opposite to heading (like a real compass card)
@@ -1221,9 +1221,9 @@ export default function App() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-          <button onClick={()=>setShowBig(!showBig)} style={iconBtnStyle(showBig)} aria-label="สลับแสดง เสวย"><span style={iconMonoStyle}>ส</span></button>
-          <button onClick={()=>setShowSmall(!showSmall)} style={iconBtnStyle(showSmall)} aria-label="สลับแสดง แทรก"><span style={iconMonoStyle}>แ</span></button>
-          <button onClick={()=>setShowAspects(!showAspects)} style={iconBtnStyle(showAspects)} aria-label="สลับแสดง ภูมิทักษา"><span style={iconMonoStyle}>ภ</span></button>
+          <button onClick={()=>setShowBig(!showBig)} style={iconBtnStyle(showBig)} aria-label="สลับแสดง เสวย">✴️</button>
+          <button onClick={()=>setShowSmall(!showSmall)} style={iconBtnStyle(showSmall)} aria-label="สลับแสดง แทรก">🔹</button>
+          <button onClick={()=>setShowAspects(!showAspects)} style={iconBtnStyle(showAspects)} aria-label="สลับแสดง ภูมิทักษา">☸️</button>
           <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={iconBtnStyle(planControlsOpen)} aria-label="แปลนบ้าน">🗺️</button>
           <button onClick={async()=>{
             if (!cameraOn) {
