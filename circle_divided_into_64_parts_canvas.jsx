@@ -30,15 +30,15 @@ export default function App() {
   // Heading in degrees (0..360), 0 = North
   const [heading, setHeading] = useState(0);
   const [sensorStatus, setSensorStatus] = useState("idle");
-  const [showBig, setShowBig] = useState(false);
+  const [showBig, setShowBig] = useState(true);
   const [showSmall, setShowSmall] = useState(false);
   const [currentBig, setCurrentBig] = useState(null);
   const [currentSmall, setCurrentSmall] = useState(null);
-  const [showAspects, setShowAspects] = useState(false);
+  const [showAspects, setShowAspects] = useState(true);
   const [userName, setUserName] = useState("");
   const [birthNum, setBirthNum] = useState(null); // now holds mapped direction number per spec
   const [showIntro, setShowIntro] = useState(false);
-  const [theme, setTheme] = useState("noon");
+  const [theme, setTheme] = useState("watch");
   const [lat, setLat] = useState(null);
   const [lon, setLon] = useState(null);
   const [altitudeM, setAltitudeM] = useState(null);
@@ -311,6 +311,9 @@ export default function App() {
       if (pu) loadPlanFromDataUrl(pu);
       const galleryJson = localStorage.getItem("planGallery") || "[]";
       try { const arr = JSON.parse(galleryJson); if (Array.isArray(arr)) setPlanGallery(arr.filter(Boolean)); } catch {}
+      // theme default to watch if not set yet
+      const savedTheme = localStorage.getItem("theme");
+      if (!savedTheme) setTheme("watch");
     } catch {}
   }, []);
 
@@ -1180,7 +1183,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <button onClick={()=>setShowBig(!showBig)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.buttonBg : t.page, color: showBig ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>เสวย</button>
           <button onClick={()=>setShowSmall(!showSmall)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.buttonBg : t.page, color: showSmall ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แทรก</button>
-          <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>บริวาร/อายุ/เดช/ศรี</button>
+          <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>ภูมิทักษา</button>
           {/* Plan controls toggler */}
           <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: planControlsOpen ? t.buttonBg : t.page, color: planControlsOpen ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แปลนบ้าน</button>
           <button onClick={async()=>{
