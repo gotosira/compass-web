@@ -60,6 +60,8 @@ export default function App() {
   const [planSheetLevel, setPlanSheetLevel] = useState("peek"); // 'peek' | 'half' | 'full'
   const [planSheetDragH, setPlanSheetDragH] = useState(null); // px during drag
   const planSheetDragRef = useRef({ active: false, startY: 0, startH: 0 });
+  const planSheetRef = useRef(null);
+  const bodyScrollRestoreRef = useRef({ overflow: "", overscrollBehaviorY: "" });
   const [rotationSnap, setRotationSnap] = useState(1); // 1° or 5°
   // Camera background (AR mode)
   const [cameraOn, setCameraOn] = useState(false);
@@ -77,6 +79,24 @@ export default function App() {
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
+  function lockBodyScroll() {
+    try {
+      const body = document.body;
+      bodyScrollRestoreRef.current.overflow = body.style.overflow || "";
+      bodyScrollRestoreRef.current.overscrollBehaviorY = body.style.overscrollBehaviorY || "";
+      body.style.overflow = "hidden";
+      body.style.overscrollBehaviorY = "contain";
+    } catch {}
+  }
+
+  function unlockBodyScroll() {
+    try {
+      const body = document.body;
+      body.style.overflow = bodyScrollRestoreRef.current.overflow;
+      body.style.overscrollBehaviorY = bodyScrollRestoreRef.current.overscrollBehaviorY;
+    } catch {}
+  }
+
   // Helper: load Image from data URL and update state
   const loadPlanFromDataUrl = (dataUrl) => {
     if (!dataUrl) return;
@@ -93,24 +113,38 @@ export default function App() {
   // Helper: compress file to dataURL (jpeg) to fit localStorage limits
   const fileToCompressedDataUrl = (file) => new Promise((resolve) => {
     try {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const maxSide = 1600; // limit dimension to save space
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const approximateTargetKB = 500; // aim ~500KB
+        const initialMaxSide = file.size > 3_000_000 ? 1024 : 1280; // large photos → smaller edge
+        const process = (maxSide, quality) => {
           const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-          const w = Math.round(img.width * scale);
-          const h = Math.round(img.height * scale);
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
           const canvas = document.createElement('canvas');
           canvas.width = w; canvas.height = h;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, w, h);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          resolve(dataUrl);
+          let dataUrl = canvas.toDataURL('image/jpeg', quality);
+          // If still larger than target, try again with smaller maxSide/quality
+          const base64Len = (dataUrl.length - (dataUrl.indexOf(',') + 1));
+          const approxBytes = Math.floor(base64Len * 0.75);
+          const approxKB = Math.round(approxBytes / 1024);
+          if (approxKB > approximateTargetKB && (maxSide > 960 || quality > 0.65)) {
+            const nextMax = Math.max(960, Math.floor(maxSide * 0.85));
+            const nextQ = Math.max(0.65, Math.round((quality - 0.05) * 100) / 100);
+            const next = process(nextMax, nextQ);
+            return next;
+          }
+          return dataUrl;
         };
-        img.src = reader.result;
+        const out = process(initialMaxSide, 0.75);
+        URL.revokeObjectURL(url);
+        resolve(out);
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(""); };
+      img.src = url;
     } catch { resolve(""); }
   });
 
@@ -1281,13 +1315,13 @@ export default function App() {
 
       {/* Plan controls bottom-sheet */}
       {planControlsOpen && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30, background: t.overlayBg, borderTop: `1px solid ${t.overlayBorder}`, borderRadius: "12px 12px 0 0", boxShadow: theme === 'noon' ? "0 -8px 18px rgba(0,0,0,.08)" : "none", padding: 12, height: planSheetDragH!=null ? planSheetDragH : (planSheetLevel==='full'? '75vh' : planSheetLevel==='half'? '45vh' : '26vh'), overflow: 'auto', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
-          onMouseDown={(e)=>{ planSheetDragRef.current = { active: true, startY: e.clientY, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30, background: t.overlayBg, borderTop: `1px solid ${t.overlayBorder}`, borderRadius: "12px 12px 0 0", boxShadow: theme === 'noon' ? "0 -8px 18px rgba(0,0,0,.08)" : "none", padding: 12, height: planSheetDragH!=null ? planSheetDragH : (planSheetLevel==='full'? '75vh' : planSheetLevel==='half'? '45vh' : '26vh'), overflow: 'auto', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', touchAction: 'none' }}
+          onMouseDown={(e)=>{ lockBodyScroll(); planSheetDragRef.current = { active: true, startY: e.clientY, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
           onMouseMove={(e)=>{ if (!planSheetDragRef.current.active) return; const dy = planSheetDragRef.current.startY - e.clientY; const nh = Math.max(120, Math.min(window.innerHeight*0.9, planSheetDragRef.current.startH + dy)); setPlanSheetDragH(nh); }}
-          onMouseUp={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); }}
-          onTouchStart={(e)=>{ const y = e.touches[0].clientY; planSheetDragRef.current = { active: true, startY: y, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
+          onMouseUp={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); unlockBodyScroll(); }}
+          onTouchStart={(e)=>{ const y = e.touches[0].clientY; lockBodyScroll(); planSheetDragRef.current = { active: true, startY: y, startH: (planSheetDragH || (planSheetLevel==='full'? window.innerHeight*0.75 : planSheetLevel==='half'? window.innerHeight*0.45 : window.innerHeight*0.26)) }; }}
           onTouchMove={(e)=>{ if (!planSheetDragRef.current.active) return; const y = e.touches[0].clientY; const dy = planSheetDragRef.current.startY - y; const nh = Math.max(120, Math.min(window.innerHeight*0.9, planSheetDragRef.current.startH + dy)); setPlanSheetDragH(nh); }}
-          onTouchEnd={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); }}
+          onTouchEnd={()=>{ if (!planSheetDragRef.current.active) return; planSheetDragRef.current.active=false; const h = planSheetDragH || 0; const vh = window.innerHeight; const ratio = h / vh; if (ratio > 0.6) setPlanSheetLevel('full'); else if (ratio > 0.33) setPlanSheetLevel('half'); else setPlanSheetLevel('peek'); setPlanSheetDragH(null); unlockBodyScroll(); }}
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ fontWeight: 700, color: t.text }}>แปลนบ้าน</div>
