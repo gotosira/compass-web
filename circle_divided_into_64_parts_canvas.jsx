@@ -105,6 +105,14 @@ export default function App() {
       img.onload = () => {
         setPlanImage(img);
         setPlanImageUrl(dataUrl);
+        // Auto-align: North (0°), center, and scale to nearly full screen
+        setPlanRotationDeg(0);
+        setPlanX(0);
+        setPlanY(0);
+        const desiredCover = 0.95; // target fraction of viewport for max side
+        const baseFactor = 0.70;   // matches draw baseScale factor
+        const autoScale = Math.min(3, Math.max(0.2, desiredCover / baseFactor));
+        setPlanScale(autoScale);
       };
       img.src = dataUrl;
     } catch {}
