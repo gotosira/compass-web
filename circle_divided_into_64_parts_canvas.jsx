@@ -1138,6 +1138,23 @@ export default function App() {
     fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
   };
 
+  const iconBtnStyle = (active) => ({
+    width: 36,
+    height: 36,
+    display: "grid",
+    placeItems: "center",
+    borderRadius: 999,
+    border: `1px solid ${t.topbarBorder}`,
+    background: active ? t.buttonBg : t.page,
+    color: active ? t.buttonText : t.text,
+    boxShadow: active ? (theme === 'noon' ? "0 2px 8px rgba(0,0,0,.08)" : "none") : "none",
+    cursor: "pointer",
+  });
+  const iconMonoStyle = { fontWeight: 800, fontSize: 14, lineHeight: 1 };
+  const cycleTheme = () => {
+    setTheme((prev)=> prev==='watch' ? 'dark' : prev==='dark' ? 'red' : prev==='red' ? 'noon' : 'watch');
+  };
+
   const enableBtnStyle = {
     position: "fixed",
     bottom: "max(16px, env(safe-area-inset-bottom))",
@@ -1180,16 +1197,15 @@ export default function App() {
           <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
           {userName && birthNum && (
             <span style={{ color: t.text, fontSize: 12 }}>
-              ผู้ใช้: {userName} • บ้านหันไปทาง {directionName(birthNum)}
+              {userName} • {directionName(birthNum)}
             </span>
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={()=>setShowBig(!showBig)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showBig ? t.buttonBg : t.page, color: showBig ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>เสวย</button>
-          <button onClick={()=>setShowSmall(!showSmall)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showSmall ? t.buttonBg : t.page, color: showSmall ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แทรก</button>
-          <button onClick={()=>setShowAspects(!showAspects)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: showAspects ? t.buttonBg : t.page, color: showAspects ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>ภูมิทักษา</button>
-          {/* Plan controls toggler */}
-          <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: planControlsOpen ? t.buttonBg : t.page, color: planControlsOpen ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>แปลนบ้าน</button>
+          <button onClick={()=>setShowBig(!showBig)} style={iconBtnStyle(showBig)} aria-label="สลับแสดง เสวย"><span style={iconMonoStyle}>ส</span></button>
+          <button onClick={()=>setShowSmall(!showSmall)} style={iconBtnStyle(showSmall)} aria-label="สลับแสดง แทรก"><span style={iconMonoStyle}>แ</span></button>
+          <button onClick={()=>setShowAspects(!showAspects)} style={iconBtnStyle(showAspects)} aria-label="สลับแสดง ภูมิทักษา"><span style={iconMonoStyle}>ภ</span></button>
+          <button onClick={()=>setPlanControlsOpen(!planControlsOpen)} style={iconBtnStyle(planControlsOpen)} aria-label="แปลนบ้าน">🗺️</button>
           <button onClick={async()=>{
             if (!cameraOn) {
               try {
@@ -1231,17 +1247,11 @@ export default function App() {
               } catch {}
               setCameraOn(false);
             }
-          }} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: cameraOn ? t.buttonBg : t.page, color: cameraOn ? t.buttonText : t.muted, fontSize: 12, fontWeight: 700 }}>{cameraOn?"ปิดกล้อง":"ส่องแปลน"}</button>
-          {/* removed offset field per request */}
-          <select value={theme} onChange={(e)=>setTheme(e.target.value)} style={{ padding: "4px 8px", borderRadius: 8, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontSize: 12 }}>
-            <option value="noon">Noon</option>
-            <option value="dark">Dark</option>
-            <option value="red">Red night</option>
-            <option value="watch">Watch Night</option>
-          </select>
-          <button onClick={()=>setShowSettings(true)} style={{ padding: "4px 8px", borderRadius: 999, width: 32, height: 32, display: 'grid', placeItems: 'center', border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text }} aria-label="Settings">⚙️</button>
+          }} style={iconBtnStyle(cameraOn)} aria-label="โหมดส่องแปลน">{cameraOn?"📷":"📷"}</button>
+          <button onClick={cycleTheme} style={iconBtnStyle(false)} aria-label="เปลี่ยนธีม">🎨</button>
+          <button onClick={()=>setShowSettings(true)} style={iconBtnStyle(false)} aria-label="ตั้งค่า">⚙️</button>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: t.text }}>{heading.toFixed(2)}°</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{heading.toFixed(0)}°</span>
       </div>
 
       {/* Camera background video (behind canvas) */}
