@@ -918,11 +918,13 @@ export default function App() {
     // keep sub labels inside safely away from inner circle
     const subTrackOuter = Math.max(innerR + 20, outerR - 20);
     const subTrackInner = Math.max(innerR + 16, subTrackOuter - 28);
-    ctx.beginPath();
-    ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
-    ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
-    ctx.fillStyle = t.trackBg;
-    ctx.fill();
+    if (!cameraOn) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, subTrackOuter, 0, Math.PI * 2);
+      ctx.arc(cx, cy, subTrackInner, 0, Math.PI * 2, true);
+      ctx.fillStyle = t.trackBg;
+      ctx.fill();
+    }
 
     // Big section labels (rotate with dial). Mapping order clockwise
     const bigSlice = slice * (SEGMENTS / 8);
@@ -1095,8 +1097,26 @@ export default function App() {
     boxShadow: "0 6px 20px rgba(15,23,42,.25)",
   };
 
+  useEffect(() => {
+    try {
+      if (cameraOn) {
+        const html = document.documentElement;
+        const body = document.body;
+        html.style.background = "transparent";
+        body.style.background = "transparent";
+        body.style.overflow = "hidden";
+      } else {
+        const html = document.documentElement;
+        const body = document.body;
+        html.style.background = "";
+        body.style.background = "";
+        body.style.overflow = "";
+      }
+    } catch {}
+  }, [cameraOn]);
+
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: cameraOn ? "transparent" : t.page, userSelect: "none" }}>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: cameraOn ? "transparent" : t.page, userSelect: "none", position: cameraOn?"fixed":"static", inset: cameraOn?0:"auto", width: cameraOn?"100vw":"auto", height: cameraOn?"100vh":"auto" }}>
       {/* Top status bar */}
       <div style={{...topBarStyle, background: cameraOn?"rgba(0,0,0,0.3)":t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 720px)", flexWrap: "wrap", justifyContent: "space-between"}}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -1158,7 +1178,7 @@ export default function App() {
 
       {/* Camera background video (behind canvas) */}
       {cameraOn && (
-        <video ref={videoRef} playsInline muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none" }} />
+        <video ref={videoRef} playsInline webkit-playsinline="true" muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none", background: "transparent" }} />
       )}
       {/* Canvas */}
       <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", left: cameraOn?"50%":"auto", top: cameraOn?"50%":"auto", transform: cameraOn?"translate(-50%, -50%)":"none", zIndex: cameraOn?1:"auto" }} />
