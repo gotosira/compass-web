@@ -1144,7 +1144,14 @@ export default function App() {
                 requestAnimationFrame(async () => {
                   if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    try { await videoRef.current.play(); } catch {}
+                    try {
+                      await new Promise((res)=>{
+                        const v = videoRef.current;
+                        const onLoaded = () => { v.removeEventListener('loadedmetadata', onLoaded); res(); };
+                        v.addEventListener('loadedmetadata', onLoaded, { once: true });
+                      });
+                      await videoRef.current.play();
+                    } catch {}
                   }
                 });
                 // Try to set zoom if supported
@@ -1181,8 +1188,8 @@ export default function App() {
       </div>
 
       {/* Camera background video (behind canvas) */}
-      {cameraOn && createPortal(
-        <video ref={videoRef} playsInline webkit-playsinline="true" muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none", background: "transparent" }} />, document.getElementById("ar-video-root"))}
+      {createPortal(
+        <video ref={videoRef} playsInline webkit-playsinline="true" muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: -1, pointerEvents: "none", background: "transparent", visibility: cameraOn?"visible":"hidden" }} />, document.getElementById("ar-video-root"))}
       {/* Canvas */}
       <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", left: cameraOn?"50%":"auto", top: cameraOn?"50%":"auto", transform: cameraOn?"translate(-50%, -50%)":"none", zIndex: cameraOn?1:"auto" }} />
 
