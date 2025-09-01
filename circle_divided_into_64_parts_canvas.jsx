@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * FIX: The previous canvas contained Dart (Flutter) code inside a TSX file, which the
@@ -1139,10 +1140,13 @@ export default function App() {
                 const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraStreamRef.current = stream;
-                if (videoRef.current) {
-                  videoRef.current.srcObject = stream;
-                  await videoRef.current.play();
-                }
+                // delay setting video src until next frame to ensure portal container is mounted
+                requestAnimationFrame(async () => {
+                  if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    try { await videoRef.current.play(); } catch {}
+                  }
+                });
                 // Try to set zoom if supported
                 const track = stream.getVideoTracks?.()[0];
                 const capabilities = track?.getCapabilities?.() || {};
@@ -1177,9 +1181,8 @@ export default function App() {
       </div>
 
       {/* Camera background video (behind canvas) */}
-      {cameraOn && (
-        <video ref={videoRef} playsInline webkit-playsinline="true" muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none", background: "transparent" }} />
-      )}
+      {cameraOn && createPortal(
+        <video ref={videoRef} playsInline webkit-playsinline="true" muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none", background: "transparent" }} />, document.getElementById("ar-video-root"))}
       {/* Canvas */}
       <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", left: cameraOn?"50%":"auto", top: cameraOn?"50%":"auto", transform: cameraOn?"translate(-50%, -50%)":"none", zIndex: cameraOn?1:"auto" }} />
 
