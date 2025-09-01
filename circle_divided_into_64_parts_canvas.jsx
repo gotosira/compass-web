@@ -1503,11 +1503,6 @@ export default function App() {
                   <option value="7">ตะวันตกเฉียงใต้ (7)</option>
                 </select>
               </label>
-              <label style={{ fontSize: 14 }}>
-                Google Maps API Key (ใช้สำหรับชื่อสถานที่ละเอียด)
-                <input value={gmapsApiKey} onChange={(e)=>{ setGmapsApiKey(e.target.value); try{ localStorage.setItem('gmapsApiKey', e.target.value||''); }catch{} }} placeholder="AIza..." style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1' }} />
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>ถ้าไม่ใส่ จะใช้ข้อมูลสำรองจาก BigDataCloud</div>
-              </label>
             </div>
           </div>
         </div>
