@@ -1271,8 +1271,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Meaning panel pinned under the dial, hidden in AR mode for visibility */}
-      {!cameraOn && <div style={{
+      {/* Meaning panel pinned under the dial */}
+      <div style={{
         position: "fixed",
         left: "50%",
         transform: "translateX(-50%)",
@@ -1312,7 +1312,7 @@ export default function App() {
             })()}
           </div>
         )}
-      </div>}
+      </div>
 
       {/* Bottom enable button for iOS permission UX */}
       {sensorStatus !== "active" && (
