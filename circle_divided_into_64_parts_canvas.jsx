@@ -833,12 +833,14 @@ export default function App() {
     return lbl;
   }
 
+  const lastDrawRef = useRef({ h: null, s: null, big: null, small: null, asp: null, theme: null, birth: null });
+
   // Draw the dial
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     canvas.width = Math.round(size * dpr);
     canvas.height = Math.round(size * dpr);
     canvas.style.width = `${size}px`;
@@ -912,7 +914,8 @@ export default function App() {
     const innerR = Math.max(outerR - ringWidth, 60);
 
     // Rotate dial opposite to heading (like a real compass card)
-    const rot = (heading * Math.PI) / 180;
+    const quantHeading = Math.round((heading ?? 0) * 2) / 2; // 0.5° steps
+    const rot = (quantHeading * Math.PI) / 180;
     const dialRot = -rot;
     const startAngle = -Math.PI / 2 + dialRot;
     const slice = (Math.PI * 2) / SEGMENTS;
@@ -1123,6 +1126,20 @@ export default function App() {
     // expose for DOM meaning box
     if (currentBig !== currentBigLabel) setCurrentBig(currentBigLabel);
     if (currentSmall !== currentSmallLabel) setCurrentSmall(currentSmallLabel);
+
+    // Skip redraws if only tiny heading changes and other parameters unchanged
+    const last = lastDrawRef.current;
+    if (
+      last.s === size &&
+      last.big === showBig &&
+      last.small === showSmall &&
+      last.asp === showAspects &&
+      last.theme === theme &&
+      last.birth === birthNum &&
+      last.h != null && Math.abs(last.h - quantHeading) < 0.5
+    ) {
+      return;
+    }
 
     // Cardinal and intercardinal letters (rotate with dial)
     const cardinals = [
