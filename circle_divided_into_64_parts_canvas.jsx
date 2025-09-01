@@ -70,6 +70,7 @@ export default function App() {
   const [uploadError, setUploadError] = useState("");
   const [planGallery, setPlanGallery] = useState([]); // array of dataURLs (strings)
   const [showSettings, setShowSettings] = useState(false);
+  const [gmapsApiKey, setGmapsApiKey] = useState("");
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -294,8 +295,10 @@ export default function App() {
     try {
       const n = localStorage.getItem("userName") || "";
       const b = Number(localStorage.getItem("birthNum") || "");
+      const gk = localStorage.getItem("gmapsApiKey") || "";
       if (n) setUserName(n);
       if (Number.isFinite(b) && b >= 1 && b <= 7) setBirthNum(b);
+      if (gk) setGmapsApiKey(gk);
       // restore overlay
       const pv = localStorage.getItem("planVisible");
       if (pv != null) setPlanVisible(pv === "true");
@@ -400,15 +403,23 @@ export default function App() {
     const fetchPlace = async () => {
       if (lat == null || lon == null) return;
       try {
-        const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=th`;
-        const r = await fetch(url);
-        const j = await r.json();
-        const parts = [j.locality || j.city || j.localityInfo?.administrative?.[0]?.name, j.principalSubdivision, j.countryName].filter(Boolean);
+        if (gmapsApiKey) {
+          const gUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lon}&language=th&key=${gmapsApiKey}`;
+          const gr = await fetch(gUrl);
+          const gj = await gr.json();
+          const full = gj?.results?.[0]?.formatted_address;
+          if (full) { setPlace(full); return; }
+        }
+        // fallback to BigDataCloud if Google not available
+        const bUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=th`;
+        const br = await fetch(bUrl);
+        const bj = await br.json();
+        const parts = [bj.locality || bj.city || bj.localityInfo?.administrative?.[0]?.name, bj.principalSubdivision, bj.countryName].filter(Boolean);
         setPlace(parts.join(", "));
       } catch {}
     };
     fetchPlace();
-  }, [lat, lon]);
+  }, [lat, lon, gmapsApiKey]);
 
   useEffect(() => {
     const fetchAlt = async () => {
@@ -1068,18 +1079,23 @@ export default function App() {
     if (currentBig !== currentBigLabel) setCurrentBig(currentBigLabel);
     if (currentSmall !== currentSmallLabel) setCurrentSmall(currentSmallLabel);
 
-    // Cardinal letters (rotate with dial)
+    // Cardinal and intercardinal letters (rotate with dial)
     const cardinals = [
       { t: "N", d: 0 },
+      { t: "NE", d: 45 },
       { t: "E", d: 90 },
+      { t: "SE", d: 135 },
       { t: "S", d: 180 },
+      { t: "SW", d: 225 },
       { t: "W", d: 270 },
+      { t: "NW", d: 315 },
     ];
-    ctx.font = "bold 22px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto";
     ctx.fillStyle = t.text;
     for (const c of cardinals) {
+      const isPrimary = c.t.length === 1;
+      ctx.font = `${isPrimary ? "bold 22px" : "600 14px"} ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto`;
       const a = (c.d - 90) * (Math.PI / 180) + dialRot;
-      const r = outerR + (smallScreen ? 56 : 68);
+      const r = outerR + (smallScreen ? (isPrimary ? 56 : 48) : (isPrimary ? 68 : 58));
       const x = cx + r * Math.cos(a);
       const y = cy + r * Math.sin(a);
       ctx.fillText(c.t, x, y);
@@ -1139,8 +1155,8 @@ export default function App() {
   };
 
   const iconBtnStyle = (active) => ({
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     display: "grid",
     placeItems: "center",
     borderRadius: 999,
@@ -1150,7 +1166,7 @@ export default function App() {
     boxShadow: active ? (theme === 'noon' ? "0 2px 8px rgba(0,0,0,.08)" : "none") : "none",
     cursor: "pointer",
   });
-  const iconMonoStyle = { fontWeight: 800, fontSize: 14, lineHeight: 1 };
+  const iconMonoStyle = { fontWeight: 800, fontSize: 16, lineHeight: 1 };
   const cycleTheme = () => {
     setTheme((prev)=> prev==='watch' ? 'dark' : prev==='dark' ? 'red' : prev==='red' ? 'noon' : 'watch');
   };
@@ -1192,8 +1208,8 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: cameraOn ? "transparent" : t.page, userSelect: "none", position: cameraOn?"fixed":"static", inset: cameraOn?0:"auto", width: cameraOn?"100vw":"auto", height: cameraOn?"100vh":"auto" }}>
       {/* Top status bar */}
-      <div style={{...topBarStyle, background: cameraOn?"rgba(0,0,0,0.3)":t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 720px)", flexWrap: "wrap", justifyContent: "space-between"}}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <div style={{...topBarStyle, background: cameraOn?"rgba(0,0,0,0.3)":t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 760px)", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
           <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
           {userName && birthNum && (
             <span style={{ color: t.text, fontSize: 12 }}>
@@ -1201,7 +1217,7 @@ export default function App() {
             </span>
           )}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
           <button onClick={()=>setShowBig(!showBig)} style={iconBtnStyle(showBig)} aria-label="สลับแสดง เสวย"><span style={iconMonoStyle}>ส</span></button>
           <button onClick={()=>setShowSmall(!showSmall)} style={iconBtnStyle(showSmall)} aria-label="สลับแสดง แทรก"><span style={iconMonoStyle}>แ</span></button>
           <button onClick={()=>setShowAspects(!showAspects)} style={iconBtnStyle(showAspects)} aria-label="สลับแสดง ภูมิทักษา"><span style={iconMonoStyle}>ภ</span></button>
@@ -1251,7 +1267,7 @@ export default function App() {
           <button onClick={cycleTheme} style={iconBtnStyle(false)} aria-label="เปลี่ยนธีม">🎨</button>
           <button onClick={()=>setShowSettings(true)} style={iconBtnStyle(false)} aria-label="ตั้งค่า">⚙️</button>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 700, color: t.text }}>{heading.toFixed(0)}°</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: t.text, marginLeft: 8 }}>{heading.toFixed(0)}°</span>
       </div>
 
       {/* Camera background video (behind canvas) */}
@@ -1483,6 +1499,11 @@ export default function App() {
                   <option value="8">ตะวันออกเฉียงใต้ (8)</option>
                   <option value="7">ตะวันตกเฉียงใต้ (7)</option>
                 </select>
+              </label>
+              <label style={{ fontSize: 14 }}>
+                Google Maps API Key (ใช้สำหรับชื่อสถานที่ละเอียด)
+                <input value={gmapsApiKey} onChange={(e)=>{ setGmapsApiKey(e.target.value); try{ localStorage.setItem('gmapsApiKey', e.target.value||''); }catch{} }} placeholder="AIza..." style={{ width: '100%', marginTop: 6, padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1' }} />
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>ถ้าไม่ใส่ จะใช้ข้อมูลสำรองจาก BigDataCloud</div>
               </label>
             </div>
           </div>
