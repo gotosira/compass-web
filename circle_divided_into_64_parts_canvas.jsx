@@ -61,6 +61,11 @@ export default function App() {
   const cameraStreamRef = useRef(null);
   const [planFollowHeading, setPlanFollowHeading] = useState(false);
   const [cameraZoom, setCameraZoom] = useState(1);
+  // Upload status & gallery
+  const [uploading, setUploading] = useState(false);
+  const [uploadMs, setUploadMs] = useState(null);
+  const [uploadError, setUploadError] = useState("");
+  const [planGallery, setPlanGallery] = useState([]); // array of dataURLs (strings)
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -304,6 +309,8 @@ export default function App() {
       if (rs === 1 || rs === 5) setRotationSnap(rs);
       const pu = localStorage.getItem("planImageUrl") || "";
       if (pu) loadPlanFromDataUrl(pu);
+      const galleryJson = localStorage.getItem("planGallery") || "[]";
+      try { const arr = JSON.parse(galleryJson); if (Array.isArray(arr)) setPlanGallery(arr.filter(Boolean)); } catch {}
     } catch {}
   }, []);
 
@@ -316,6 +323,7 @@ export default function App() {
   useEffect(()=>{ try{ localStorage.setItem("planY", String(planY)); }catch{} }, [planY]);
   useEffect(()=>{ try{ localStorage.setItem("rotationSnap", String(rotationSnap)); }catch{} }, [rotationSnap]);
   useEffect(()=>{ try{ if (planImageUrl) localStorage.setItem("planImageUrl", planImageUrl); }catch{} }, [planImageUrl]);
+  useEffect(()=>{ try{ localStorage.setItem("planGallery", JSON.stringify(planGallery.slice(0,10))); }catch{} }, [planGallery]);
 
   useEffect(() => {
     if (sensorStatus === "active") {
@@ -614,8 +622,8 @@ export default function App() {
         }
       } catch {}
 
-      const ok = startSensors();
-      setSensorStatus(ok ? "active" : "unavailable");
+        const ok = startSensors();
+        setSensorStatus(ok ? "active" : "unavailable");
     } catch (e) {
       console.warn("Permission request failed", e);
       setSensorStatus("error");
@@ -782,7 +790,7 @@ export default function App() {
     // Background (theme) – transparent when camera background is on
     if (!cameraOn) {
       ctx.fillStyle = t.bg;
-      ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, size, size);
     } else {
       // leave transparent for video background
       ctx.clearRect(0, 0, size, size);
@@ -1131,11 +1139,11 @@ export default function App() {
     zIndex: 20,
     padding: "14px 18px",
     borderRadius: 12,
-    background: "#0f172a",
-    color: "#fff",
-    border: "1px solid #0f172a",
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #0f172a",
     fontSize: 16,
-    fontWeight: 600,
+              fontWeight: 600,
     boxShadow: "0 6px 20px rgba(15,23,42,.25)",
   };
 
@@ -1249,10 +1257,22 @@ export default function App() {
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e)=>{
               const f = e.target.files && e.target.files[0];
               if (!f) return;
+              setUploadError("");
+              setUploading(true);
+              const t0 = performance.now();
               (async () => {
-                const dataUrl = await fileToCompressedDataUrl(f);
-                loadPlanFromDataUrl(dataUrl);
-                try { localStorage.setItem("planImageUrl", dataUrl); } catch {}
+                try {
+                  const dataUrl = await fileToCompressedDataUrl(f);
+                  loadPlanFromDataUrl(dataUrl);
+                  setPlanGallery((g)=>[dataUrl, ...g.filter((x)=>x!==dataUrl)].slice(0,10));
+                  try { localStorage.setItem("planImageUrl", dataUrl); } catch {}
+                } catch (err) {
+                  setUploadError("อัปโหลดไม่สำเร็จ");
+                } finally {
+                  const t1 = performance.now();
+                  setUploadMs(Math.max(0, Math.round(t1 - t0)));
+                  setUploading(false);
+                }
               })();
             }} />
             <button onClick={()=>{ setPlanX(0); setPlanY(0); }} style={{ padding: "10px 12px", borderRadius: 10, border: `1px solid ${t.topbarBorder}`, background: t.page, color: t.text, fontWeight: 700 }}>กึ่งกลาง</button>
@@ -1269,6 +1289,15 @@ export default function App() {
             </div>
           </div>
           <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            {uploading && (
+              <div style={{ fontSize: 12, color: t.muted, textAlign: "center" }}>กำลังอัปโหลด/แปลงภาพ...</div>
+            )}
+            {uploadMs!=null && !uploading && (
+              <div style={{ fontSize: 12, color: t.muted, textAlign: "center" }}>ใช้เวลา {uploadMs} ms</div>
+            )}
+            {uploadError && (
+              <div style={{ fontSize: 12, color: '#ef4444', textAlign: 'center' }}>{uploadError}</div>
+            )}
             <label style={{ fontSize: 12, color: t.muted }}>
               โปร่งใส ({Math.round(planOpacity*100)}%)
               <input type="range" min={0} max={1} step={0.05} value={planOpacity} onChange={(e)=>setPlanOpacity(Number(e.target.value))} style={{ width: "100%" }} />
@@ -1306,6 +1335,18 @@ export default function App() {
               </label>
             )}
             <div style={{ fontSize: 12, color: t.muted, textAlign: "center" }}>ลากนิ้วบนแคนวาสเพื่อย้ายตำแหน่งแปลน</div>
+            {planGallery.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontSize: 12, color: t.muted, marginBottom: 6, textAlign: 'center' }}>แกลเลอรีล่าสุด</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                  {planGallery.map((src, idx) => (
+                    <button key={idx} onClick={()=>loadPlanFromDataUrl(src)} style={{ border: `1px solid ${t.topbarBorder}`, borderRadius: 8, padding: 0, overflow: 'hidden', height: 56, background: t.page }}>
+                      <img src={src} alt="plan" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
