@@ -18,6 +18,9 @@ import { createPortal } from "react-dom";
 export default function App() {
   const canvasRef = useRef(null);
 
+  // Default Google Maps API Key (used for reverse geocoding)
+  const DEFAULT_GMAPS_API_KEY = "AIzaSyA0cNP9wknBO5DEptzrvGYRARTuPrcvi4Q";
+
   // Geometry (fixed for compass mode)
   const SEGMENTS = 64;
   // Old fixed values made mobile cramped; compute responsive geometry during draw
@@ -70,7 +73,7 @@ export default function App() {
   const [uploadError, setUploadError] = useState("");
   const [planGallery, setPlanGallery] = useState([]); // array of dataURLs (strings)
   const [showSettings, setShowSettings] = useState(false);
-  const [gmapsApiKey, setGmapsApiKey] = useState("");
+  const [gmapsApiKey, setGmapsApiKey] = useState(DEFAULT_GMAPS_API_KEY);
   const fileInputRef = useRef(null);
   const planDragRef = useRef({ dragging: false, lastX: 0, lastY: 0 });
 
@@ -295,7 +298,7 @@ export default function App() {
     try {
       const n = localStorage.getItem("userName") || "";
       const b = Number(localStorage.getItem("birthNum") || "");
-      const gk = localStorage.getItem("gmapsApiKey") || "";
+      const gk = localStorage.getItem("gmapsApiKey") || DEFAULT_GMAPS_API_KEY;
       if (n) setUserName(n);
       if (Number.isFinite(b) && b >= 1 && b <= 7) setBirthNum(b);
       if (gk) setGmapsApiKey(gk);
