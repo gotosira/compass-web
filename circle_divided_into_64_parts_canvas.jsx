@@ -1096,9 +1096,9 @@ export default function App() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: t.page, userSelect: "none" }}>
+    <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: cameraOn ? "transparent" : t.page, userSelect: "none" }}>
       {/* Top status bar */}
-      <div style={{...topBarStyle, background: t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 720px)", flexWrap: "wrap", justifyContent: "space-between"}}>
+      <div style={{...topBarStyle, background: cameraOn?"rgba(0,0,0,0.3)":t.topbarBg, border: `1px solid ${t.topbarBorder}`, width: "min(95vw, 720px)", flexWrap: "wrap", justifyContent: "space-between"}}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           <span style={{ color: t.muted, fontSize: 14 }}>เข็มทิศชัยภูมิพระร่วง</span>
           {userName && birthNum && (
@@ -1158,10 +1158,10 @@ export default function App() {
 
       {/* Camera background video (behind canvas) */}
       {cameraOn && (
-        <video ref={videoRef} playsInline muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0 }} />
+        <video ref={videoRef} playsInline muted autoPlay style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", zIndex: 0, pointerEvents: "none" }} />
       )}
       {/* Canvas */}
-      <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", inset: cameraOn?0:"auto", zIndex: cameraOn?1:"auto" }} />
+      <canvas ref={canvasRef} style={{ position: cameraOn?"fixed":"static", left: cameraOn?"50%":"auto", top: cameraOn?"50%":"auto", transform: cameraOn?"translate(-50%, -50%)":"none", zIndex: cameraOn?1:"auto" }} />
 
       {/* Plan controls bottom-sheet */}
       {planControlsOpen && (
